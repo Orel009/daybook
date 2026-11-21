@@ -64,6 +64,9 @@ export async function checkSession(): Promise<SessionCheck> {
   }
 }
 
+const SIGN_UPS_CLOSED = 'New accounts are closed. Log in with an existing account.';
+const GOOGLE_OFF = 'Logging in with Google is turned off. Log in with your email and password.';
+
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD: "That email and password don't match an account.",
   USER_ALREADY_EXISTS: 'There is already an account with that email. Log in instead.',
@@ -72,15 +75,33 @@ const MESSAGES: Record<string, string> = {
   PASSWORD_TOO_LONG: 'That password is too long.',
   INVALID_EMAIL: "That doesn't look like an email address.",
   EMAIL_NOT_VERIFIED: 'Confirm your email address first, using the link we sent you.',
+  // sign-ups turned off on the server
+  EMAIL_PASSWORD_SIGN_UP_DISABLED: SIGN_UPS_CLOSED,
+  EMAIL_AND_PASSWORD_SIGN_UP_IS_NOT_ENABLED: SIGN_UPS_CLOSED,
+  SIGNUP_DISABLED: SIGN_UPS_CLOSED,
+  NEW_USER_SIGNUP_DISABLED: SIGN_UPS_CLOSED,
+  // Google removed as a login provider
+  PROVIDER_NOT_FOUND: GOOGLE_OFF,
+  OAUTH_PROVIDER_NOT_FOUND: GOOGLE_OFF,
+  // password reset codes
+  INVALID_OTP: 'That code is wrong or no longer valid. Check the email address and the code, or send a new code.',
+  OTP_EXPIRED: 'That code has expired. Send a new code.',
+  TOO_MANY_ATTEMPTS: 'Too many wrong tries for that code. Send a new code.',
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Too many wrong tries for that code. Send a new code.',
+  TOO_MANY_ATTEMPTS_PLEASE_REQUEST_A_NEW_CODE: 'Too many wrong tries for that code. Send a new code.',
+  USER_NOT_FOUND: "There's no account with that email address.",
+  TOO_MANY_REQUESTS: 'Too many tries in a short time. Wait a minute, then try again.',
 };
 
-function explain(error: unknown): string {
-  const e = error as { code?: string; message?: string; error?: { code?: string }; body?: { code?: string } } | null;
+/** A clear message for an auth error, from its code or, when the code is missing, its text. */
+export function explain(error: unknown): string {
+  const e = error as { code?: string; message?: string; status?: number; error?: { code?: string }; body?: { code?: string } } | null;
   // The code isn't always passed through; "Invalid email or password" → INVALID_EMAIL_OR_PASSWORD.
   const fromMessage = e?.message?.toUpperCase().replace(/[^A-Z]+/g, '_').replace(/^_+|_+$/g, '');
   const code = [e?.code, e?.error?.code, e?.body?.code, fromMessage].find((c) => c && MESSAGES[c]);
   if (code) return MESSAGES[code];
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return "You're offline. Connect to the internet and try again.";
+  if (e?.status === 429) return MESSAGES.TOO_MANY_REQUESTS;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return "You're offline. Connect to the internet and try again.";
   return e?.message ? `That didn't work: ${e.message}` : "That didn't work. Try again in a moment.";
 }
 
@@ -105,16 +126,75 @@ export async function signUpWithEmail(email: string, password: string, name: str
   }
 }
 
-/** Leaves for Google's sign-in page; the app opens again on Settings afterwards. */
+/**
+ * Leaves for Google's sign-in page; the app opens again on Settings afterwards,
+ * also when Google login fails (then with `?error=…`, see `googleLoginProblem`).
+ */
 export async function logInWithGoogle(): Promise<string | null> {
   try {
     const client = await getClient();
     const back = `${location.origin}${location.pathname}#/settings`;
-    const { error } = await client.auth.signIn.social({ provider: 'google', callbackURL: back });
+    const { error } = await client.auth.signIn.social({ provider: 'google', callbackURL: back, errorCallbackURL: back });
     return error ? explain(error) : null;
   } catch (err) {
     return explain(err);
   }
+}
+
+/**
+ * Why a Google login that returned to the app didn't work, read once when the
+ * app loads; the `error` parameter is then removed from the address.
+ */
+export const googleLoginProblem: string | null = (() => {
+  if (typeof location === 'undefined') return null;
+  const url = new URL(location.href);
+  const code = url.searchParams.get('error');
+  if (!code) return null;
+  url.searchParams.delete('error');
+  url.searchParams.delete('error_description');
+  history.replaceState(history.state, '', url.href);
+  const known = MESSAGES[code.toUpperCase().replace(/[^A-Z]+/g, '_')];
+  return known ?? "Logging in with Google didn't finish. Try again, or log in with your email and password.";
+})();
+
+// ---------- forgotten password: a 6-digit code by email ----------
+
+// The SDK loads Better Auth's email-OTP plugin, but its types don't expose it
+// on `client.auth` (@neon/neon-js 0.10.2), so these two calls are typed here.
+interface ResetApi {
+  forgetPassword?: { emailOtp?: (body: { email: string }) => Promise<{ error?: unknown }> };
+  emailOtp?: { resetPassword?: (body: { email: string; otp: string; password: string }) => Promise<{ error?: unknown }> };
+}
+const RESET_UNAVAILABLE = "Resetting a password isn't available right now. Try again later.";
+
+/**
+ * Asks for a reset code. The server answers the same whether or not the email
+ * has an account (so nobody can probe for accounts); a wrong address shows up
+ * later as an invalid code.
+ */
+export async function sendResetCode(email: string): Promise<string | null> {
+  try {
+    const auth = (await getClient()).auth as unknown as ResetApi;
+    if (!auth.forgetPassword?.emailOtp) return RESET_UNAVAILABLE;
+    const { error } = await auth.forgetPassword.emailOtp({ email });
+    return error ? explain(error) : null;
+  } catch (err) {
+    return explain(err);
+  }
+}
+
+/** Sets the new password with the code, then logs in with it. */
+export async function resetPasswordWithCode(email: string, otp: string, password: string): Promise<string | null> {
+  try {
+    const auth = (await getClient()).auth as unknown as ResetApi;
+    if (!auth.emailOtp?.resetPassword) return RESET_UNAVAILABLE;
+    const { error } = await auth.emailOtp.resetPassword({ email, otp, password });
+    if (error) return explain(error);
+  } catch (err) {
+    return explain(err);
+  }
+  const loginError = await logInWithEmail(email, password);
+  return loginError ? `Your new password is set, but logging in didn't work. Go back and log in with it. (${loginError})` : null;
 }
 
 export async function logOutOfCloud(): Promise<string | null> {

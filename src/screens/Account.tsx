@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { logInWithEmail, logInWithGoogle, signUpWithEmail } from '../data/cloud';
+import { googleLoginProblem, logInWithEmail, logInWithGoogle, resetPasswordWithCode, sendResetCode, signUpWithEmail } from '../data/cloud';
 import { useStore } from '../data/store';
 import { logOut, syncNow, unsentCount, useSync } from '../data/sync';
 import { LOCALE } from '../domain/dates';
@@ -37,7 +37,7 @@ export function AccountSection() {
     );
   }
 
-  if (status === 'signed-out') return <LogInForm notice={message} />;
+  if (status === 'signed-out') return <LogInForm notice={message} onPasswordReset={() => setMessage('Your new password is set, and you are logged in.')} />;
 
   const startLogOut = async () => {
     setMessage('');
@@ -118,14 +118,25 @@ export function AccountSection() {
   );
 }
 
-function LogInForm({ notice }: { notice: string }) {
+function LogInForm({ notice, onPasswordReset }: { notice: string; onPasswordReset: () => void }) {
   const ownerName = useStore((s) => s.settings.ownerName);
   const expired = useSync((s) => s.email); // set when this device was logged in and the login ran out
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState(expired ?? '');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(googleLoginProblem ?? '');
+  const [resetting, setResetting] = useState(false);
+
+  if (resetting) {
+    return (
+      <ResetPassword
+        startEmail={email.trim()}
+        onBack={() => setResetting(false)}
+        onDone={onPasswordReset}
+      />
+    );
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -195,6 +206,11 @@ function LogInForm({ notice }: { notice: string }) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder={mode === 'signup' ? 'At least 8 characters' : undefined}
           />
+          {mode === 'login' && (
+            <button type="button" className="btn btn-quiet account-forgot" onClick={() => setResetting(true)}>
+              Forgot password?
+            </button>
+          )}
         </div>
         <div className="inline">
           <button className="btn btn-primary" type="submit" disabled={busy}>
@@ -205,6 +221,121 @@ function LogInForm({ notice }: { notice: string }) {
           </button>
         </div>
       </form>
+      {message && (
+        <p className="muted" role="status">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Forgot password: a 6-digit code by email, then a new password, then logged in. */
+function ResetPassword({ startEmail, onBack, onDone }: { startEmail: string; onBack: () => void; onDone: () => void }) {
+  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [email, setEmail] = useState(startEmail);
+  const [sentTo, setSentTo] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const send = async (e?: FormEvent) => {
+    e?.preventDefault();
+    setBusy(true);
+    setMessage('');
+    const address = (step === 'email' ? email : sentTo).trim();
+    const error = await sendResetCode(address);
+    if (error) {
+      setMessage(error);
+    } else {
+      setSentTo(address);
+      setCode('');
+      setStep('code');
+      if (step === 'code') setMessage('A new code is on its way. Use the newest one.');
+    }
+    setBusy(false);
+  };
+
+  const reset = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMessage('');
+    const error = await resetPasswordWithCode(sentTo, code.trim(), password);
+    if (error) {
+      setMessage(error);
+      setBusy(false);
+      return;
+    }
+    await syncNow(); // logged in: the Account section switches to the signed-in view
+    onDone();
+  };
+
+  return (
+    <section className="card form-card">
+      <h2>Account</h2>
+      <h3>Reset your password</h3>
+      {step === 'email' ? (
+        <form className="form-card account-form" onSubmit={send}>
+          <p>Enter the email address of your account. We'll send you a 6-digit code.</p>
+          <div className="field">
+            <label htmlFor="reset-email">Email</label>
+            <input id="reset-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="inline">
+            <button className="btn btn-primary" type="submit" disabled={busy}>
+              Send code
+            </button>
+            <button className="btn btn-quiet" type="button" onClick={onBack}>
+              Back to log in
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form className="form-card account-form" onSubmit={reset}>
+          <p>
+            If there is an account for <strong>{sentTo}</strong>, a 6-digit code is on its way. It can take a minute; check the spam folder too. The code works for a few minutes.
+          </p>
+          <div className="field">
+            <label htmlFor="reset-code">Code from the email</label>
+            <input
+              id="reset-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="reset-password">New password</label>
+            <input
+              id="reset-password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+            />
+          </div>
+          <div className="inline">
+            <button className="btn btn-primary" type="submit" disabled={busy}>
+              Set new password
+            </button>
+            <button className="btn" type="button" onClick={() => void send()} disabled={busy}>
+              Send a new code
+            </button>
+            <button className="btn btn-quiet" type="button" onClick={onBack}>
+              Back to log in
+            </button>
+          </div>
+        </form>
+      )}
       {message && (
         <p className="muted" role="status">
           {message}

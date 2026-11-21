@@ -8,7 +8,7 @@ import { StaticPage } from '../ui/PageCanvas';
 import { Sheet } from '../ui/Sheet';
 import { useActiveTrackers } from '../data/hooks';
 import { draftFromPreset, PRESETS } from '../data/defaults';
-import { BUILT_IN_TEMPLATES, buildTemplatePage, TEMPLATE_SUBJECTS, type BuiltInTemplate } from '../templates/builtin';
+import { BUILT_IN_TEMPLATES, buildTemplatePage, TEMPLATE_GROUPS, TEMPLATE_SUBJECTS, type BuiltInTemplate } from '../templates/builtin';
 import { CopiesWaiting, SharedPagesSection } from './Shared';
 
 const THUMB = { portrait: 168, landscape: 224 };
@@ -167,17 +167,33 @@ export function Templates() {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const createPage = useStore((s) => s.createPage);
   const builtIn = useBuiltInTemplates();
+  const [group, setGroup] = useState<string>('All');
   const [subject, setSubject] = useState<string>('All');
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const matches = (...texts: string[]) => !q || texts.some((t) => t.toLowerCase().includes(q));
+  const groupSubjects: readonly string[] = group === 'All' ? TEMPLATE_SUBJECTS : TEMPLATE_GROUPS.find((g) => g.name === group)?.subjects ?? [];
+  const shownSubjects = groupSubjects.filter((name) => subject === 'All' || subject === name);
+  const found = (name: string) => BUILT_IN_TEMPLATES.filter((t) => t.subject === name && matches(t.name, t.description, t.subject));
+  const mine = templates.filter((t) => matches(t.title || 'Untitled page'));
+  const nothing = shownSubjects.every((name) => found(name).length === 0) && mine.length === 0;
 
   return (
     <>
       <PageHeader title="Templates" sub="Start a page from one of these, then make it yours" />
 
-      {templates.length > 0 && (
+      <div className="template-search">
+        <label htmlFor="template-search" className="sr-only">
+          Search templates
+        </label>
+        <input id="template-search" type="search" placeholder="Search templates: bingo, birthday, weather…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+
+      {mine.length > 0 && (
         <section className="group">
           <h2 className="group-title">Your templates</h2>
           <div className="page-grid">
-            {templates.map((t) => (
+            {mine.map((t) => (
               <PageCard key={t.id} page={t}>
                 <button
                   className="btn btn-small"
@@ -194,22 +210,40 @@ export function Templates() {
         </section>
       )}
 
+      <div className="sticker-sets group-chips" role="radiogroup" aria-label="Kind of template">
+        {['All', ...TEMPLATE_GROUPS.map((g) => g.name)].map((name) => (
+          <button
+            key={name}
+            role="radio"
+            aria-checked={group === name}
+            className={`chip ${group === name ? 'is-on' : ''}`}
+            onClick={() => {
+              setGroup(name);
+              setSubject('All');
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
       <div className="sticker-sets subject-chips" role="radiogroup" aria-label="Subject">
         <button role="radio" aria-checked={subject === 'All'} className={`chip ${subject === 'All' ? 'is-on' : ''}`} onClick={() => setSubject('All')}>
-          All
+          {group === 'All' ? 'Every subject' : `All ${group.toLowerCase()}`}
         </button>
-        {TEMPLATE_SUBJECTS.map((name) => (
+        {groupSubjects.map((name) => (
           <button key={name} role="radio" aria-checked={subject === name} className={`chip ${subject === name ? 'is-on' : ''}`} onClick={() => setSubject(name)}>
             {name}
           </button>
         ))}
       </div>
 
-      {TEMPLATE_SUBJECTS.filter((name) => subject === 'All' || subject === name).map((name) => (
+      {nothing && <p className="muted">No templates match "{query.trim()}". Try another word, or pick a subject.</p>}
+
+      {shownSubjects.filter((name) => found(name).length > 0).map((name) => (
         <section className="group" key={name}>
           <h2 className="group-title">{name}</h2>
           <div className="page-grid">
-            {BUILT_IN_TEMPLATES.filter((t) => t.subject === name).map((t) => {
+            {found(name).map((t) => {
               const missing = builtIn.missing(t);
               return (
                 <article key={t.id} className="page-card">

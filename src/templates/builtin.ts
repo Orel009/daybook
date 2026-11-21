@@ -6,6 +6,7 @@ import {
   type BookshelfElement,
   type BoxElement,
   type ChecklistElement,
+  type GridElement,
   type MonthElement,
   type Page,
   type PageBackground,
@@ -20,6 +21,7 @@ import {
   type WritingElement,
 } from '../domain/pages';
 import { newId } from '../domain/types';
+import { moreTemplates } from './more';
 
 // Ready-made pages. A template is a function that lays out ordinary page
 // elements, so everything it makes can be moved, restyled or removed in the
@@ -38,8 +40,21 @@ export interface TemplateContext {
   trackerIds: string[];
 }
 
-export const TEMPLATE_SUBJECTS = ['Planning', 'Food', 'Mood', 'Sleep', 'Sports and fitness', 'Water', 'Books', 'Goals', 'Gratitude', 'Memories', 'Money', 'Habits'] as const;
+export const TEMPLATE_SUBJECTS = [
+  'Planning', 'Food', 'Mood', 'Sleep', 'Sports and fitness', 'Water', 'Books', 'Goals', 'Gratitude', 'Memories', 'Money', 'Habits',
+  'Bucket lists', 'Yearly bingo', 'Birthdays', 'Alphabet challenge', 'Book bingo', 'Movie challenge', 'Series', 'Dreams',
+  'Weather', 'Temperature', 'Self-care', 'Travel', 'Home', 'Family', 'Holidays',
+] as const;
 export type TemplateSubject = (typeof TEMPLATE_SUBJECTS)[number];
+
+/** Subjects in a few groups, so the subject chips stay short. */
+export const TEMPLATE_GROUPS: { name: string; subjects: TemplateSubject[] }[] = [
+  { name: 'Plan', subjects: ['Planning', 'Goals', 'Money', 'Travel', 'Home', 'Family', 'Holidays'] },
+  { name: 'Track', subjects: ['Habits', 'Mood', 'Sleep', 'Dreams', 'Water', 'Food', 'Sports and fitness', 'Self-care', 'Weather', 'Temperature', 'Series'] },
+  { name: 'Journal', subjects: ['Gratitude', 'Memories', 'Birthdays', 'Books'] },
+  { name: 'Challenges', subjects: ['Yearly bingo', 'Book bingo', 'Alphabet challenge', 'Movie challenge'] },
+  { name: 'Lists', subjects: ['Bucket lists'] },
+];
 
 export interface BuiltInTemplate {
   id: string;
@@ -123,7 +138,23 @@ const sportLog = (id: string, name: string, preset: string, sticker: string, col
 
 const paper = (index: number, pattern: PageBackground['pattern'] = 'dots'): PageBackground => ({ color: BG_COLORS[index], pattern });
 
-export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
+/** Tiles for bingo cards and challenges: labels are printed, the rest is written in Edit. */
+const tiles = (x: number, y: number, w: number, h: number, heading: string, color: string, cols: number, labels: number | string[], o: Partial<GridElement> = {}): GridElement => ({
+  id: newId(), type: 'tiles', x, y, w, h, rotation: 0, title: heading, color, cols, mark: 'cross',
+  tiles: typeof labels === 'number' ? Array.from({ length: labels }, () => ({})) : labels.map((label) => (label ? { label } : {})),
+  ...o,
+});
+/** A dashed photo spot held by a strip of tape. */
+const photoSpot = (x: number, y: number, w: number, h: number, rotation: number, color: string, pattern: TapePattern, label = 'A photo goes here'): PageElement[] => [
+  box(x, y, w, h, label, rotation),
+  tape(x + w / 2 - 70, y - 18, 140, color, pattern, -rotation),
+];
+
+/** The layout helpers, for templates kept in other files (more.ts). */
+const kit = { title, sub, list, table, write, box, month, tape, art, track, shelf, tiles, photoSpot, blank, paper, weekDays, shortDays, monthName, longDate, INK, SOFT };
+export type TemplateKit = typeof kit;
+
+const CORE_TEMPLATES: BuiltInTemplate[] = [
   {
     id: 'daily',
     subject: 'Planning',
@@ -1571,6 +1602,8 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
     }),
   },
 ];
+
+export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [...CORE_TEMPLATES, ...moreTemplates(kit)];
 
 /** A complete page from a template. Use `createPage(…, from: thisPage)` to save it. */
 export function buildTemplatePage(t: BuiltInTemplate, ctx: TemplateContext): Page {

@@ -878,6 +878,698 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
       ],
     }),
   },
+  // ===== More templates: three new ones for every subject =====
+
+  // ----- planning
+  {
+    id: 'week-glance',
+    subject: 'Planning',
+    name: 'Week at a glance',
+    description: 'Morning, afternoon and evening for every day, with priorities and notes underneath.',
+    size: 'landscape',
+    build: (ctx) => ({
+      background: paper(1, 'grid'),
+      elements: [
+        title(50, 30, 700, 'Week at a glance'),
+        sub(54, 132, 600, `Week of ${weekStart(ctx)}`),
+        tape(930, 60, 220, 'sky', 'checker', 3),
+        table(50, 190, 1100, 450, '', 'sky', shortDays(ctx), ['Morning', 'Afternoon', 'Evening']),
+        list(50, 664, 540, 'Top priorities', 'rose', 2),
+        write(610, 664, 540, 206, 'Notes', 'butter'),
+      ],
+    }),
+  },
+  {
+    id: 'time-blocks',
+    subject: 'Planning',
+    name: 'Time-blocked day',
+    description: 'Every hour from 6 am to 9 pm, with must-dos, notes and tomorrow.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(0),
+      elements: [
+        title(60, 50, 620, 'Today'),
+        sub(62, 150, 600, longDate(ctx.today)),
+        art(724, 44, 120, 'bulb', 'butter', 6),
+        table(60, 214, 440, 936, 'Hour by hour', 'mint', ['Plan', 'Done'], ['6 am', '7', '8', '9', '10', '11', '12 pm', '1', '2', '3', '4', '5', '6', '7', '8', '9']),
+        list(530, 214, 310, 'Must do', 'rose', 3),
+        write(530, 500, 310, 330, 'Notes', 'butter'),
+        write(530, 850, 310, 300, 'Tomorrow', 'lilac'),
+      ],
+    }),
+  },
+  {
+    id: 'brain-dump',
+    subject: 'Planning',
+    name: 'Brain dump',
+    description: 'Empty your head onto the page, then sort it into today, this week and someday.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(7, 'plain'),
+      elements: [
+        title(60, 50, 620, 'Brain dump'),
+        art(712, 34, 136, 'cloud', 'sky', -6),
+        art(658, 104, 56, 'sparkle', 'butter'),
+        write(60, 196, 780, 560, 'Everything on my mind', 'sky'),
+        list(60, 786, 250, 'Today', 'rose', 3),
+        list(325, 786, 250, 'This week', 'butter', 3),
+        list(590, 786, 250, 'Someday', 'mint', 3),
+      ],
+    }),
+  },
+
+  // ----- food
+  {
+    id: 'kitchen-stock',
+    subject: 'Food',
+    name: 'Pantry and fridge',
+    description: 'What’s in the fridge, freezer and cupboards, what’s running low, and what to use up first.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(5),
+      elements: [
+        title(60, 50, 700, 'Kitchen check'),
+        art(726, 42, 120, 'mug', 'rose', 6),
+        list(60, 196, 380, 'Fridge', 'sky', 4),
+        list(460, 196, 380, 'Freezer', 'lilac', 4),
+        list(60, 536, 380, 'Cupboards', 'peach', 4),
+        list(460, 536, 380, 'Running low', 'coral', 4),
+        write(60, 880, 780, 270, 'Use up first', 'butter'),
+      ],
+    }),
+  },
+  {
+    id: 'meal-prep',
+    subject: 'Food',
+    name: 'Meal prep',
+    description: 'What to cook, chop and portion on prep day, and the boxes for each weekday.',
+    size: 'landscape',
+    build: () => ({
+      background: paper(3, 'grid'),
+      elements: [
+        title(50, 30, 700, 'Meal prep day'),
+        art(1030, 24, 120, 'togo', 'peach', 8),
+        list(50, 160, 350, 'Cook', 'coral', 4),
+        list(425, 160, 350, 'Chop and wash', 'sage', 4),
+        list(800, 160, 350, 'Portion and store', 'sky', 4),
+        table(50, 500, 760, 350, 'Boxes for the week', 'peach', ['Lunch', 'Dinner'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']),
+        write(830, 500, 320, 350, 'To buy', 'mint'),
+      ],
+    }),
+  },
+  {
+    id: 'recipe-index',
+    subject: 'Food',
+    name: 'Recipe index',
+    description: 'Your favourite recipes and where to find them, plus ones you want to try.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(4, 'lines'),
+      elements: [
+        tape(60, 44, 240, 'peach', 'gingham', -3),
+        title(60, 60, 700, 'Recipe index'),
+        art(740, 50, 100, 'icecream', 'rose', 10),
+        table(60, 200, 780, 640, 'Our favourites', 'coral', ['Recipe', 'Where it is', 'Stars'], blank(10)),
+        list(60, 866, 380, 'Want to try', 'mint', 4),
+        write(460, 866, 380, 284, 'Kitchen notes', 'butter'),
+      ],
+    }),
+  },
+
+  // ----- mood
+  {
+    id: 'mood-week',
+    subject: 'Mood',
+    name: 'Mood week',
+    description: 'Mood, energy and why, day by day, beside your mood tracker.',
+    size: 'landscape',
+    needs: ['Mood'],
+    build: (ctx) => ({
+      background: paper(2),
+      elements: [
+        title(50, 30, 700, 'Mood week'),
+        sub(54, 132, 600, `Week of ${weekStart(ctx)}`),
+        table(50, 190, 700, 660, '', 'rose', ['Mood', 'Energy 1 to 5', 'Why'], weekDays(ctx)),
+        track(780, 150, 370, ctx.tracker('Mood'), { look: 'calendar' }),
+      ],
+    }),
+  },
+  {
+    id: 'name-the-feeling',
+    subject: 'Mood',
+    name: 'Name the feeling',
+    description: 'Tick the words that fit today, then write about what happened and what you need.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(8),
+      elements: [
+        title(60, 50, 700, 'Name the feeling'),
+        sub(62, 150, 700, 'Tick every word that fits today.'),
+        art(744, 46, 100, 'speech', 'lilac', 6),
+        list(60, 210, 250, 'Happy', 'butter', ['Excited', 'Proud', 'Grateful']),
+        list(325, 210, 250, 'Calm', 'mint', ['Relaxed', 'Content', 'Safe']),
+        list(590, 210, 250, 'Sad', 'blue', ['Lonely', 'Let down', 'Tired']),
+        list(60, 490, 250, 'Worried', 'lilac', ['Nervous', 'Overwhelmed', 'Unsure']),
+        list(325, 490, 250, 'Angry', 'coral', ['Frustrated', 'Annoyed', 'Jealous']),
+        list(590, 490, 250, 'Something else', 'sage', 3),
+        write(60, 790, 380, 360, 'What happened', 'rose'),
+        write(460, 790, 380, 360, 'What I need right now', 'sky'),
+      ],
+    }),
+  },
+  {
+    id: 'mood-month-notes',
+    subject: 'Mood',
+    name: 'Mood month',
+    description: 'A word or colour for every day of the month, a key, and the patterns you notice.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(1),
+      elements: [
+        title(60, 50, 700, `${monthName(ctx.today)} moods`),
+        tape(620, 156, 220, 'lilac', 'confetti', 4),
+        month(60, 196, 780, 630, 'lilac', ctx.today),
+        table(60, 850, 380, 300, 'My key', 'butter', ['Word or colour', 'Feeling'], blank(5)),
+        write(460, 850, 380, 300, 'Patterns I notice', 'mint'),
+      ],
+    }),
+  },
+
+  // ----- sleep
+  {
+    id: 'sleep-month',
+    subject: 'Sleep',
+    name: 'Sleep month',
+    description: 'Hours slept on every day of the month, and what helped or kept you up.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(8, 'plain'),
+      elements: [
+        title(60, 50, 700, 'Sleep this month'),
+        art(736, 40, 110, 'starlight', 'butter'),
+        month(60, 196, 780, 640, 'lilac', ctx.today),
+        write(60, 866, 380, 284, 'What helped', 'mint'),
+        write(460, 866, 380, 284, 'What kept me up', 'sky'),
+      ],
+    }),
+  },
+  {
+    id: 'night-routine',
+    subject: 'Sleep',
+    name: 'Night-time routine',
+    description: 'A calm dark page: an hour-before checklist, worries parked until morning, three good things.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(10, 'dots'),
+      elements: [
+        title(60, 50, 640, 'Winding down', { color: '#FFFFFF' }),
+        title(62, 150, 640, 'Slow down, one step at a time.', { font: 'clean', size: 30, color: '#D9D2E3' }),
+        art(720, 40, 120, 'starlight', 'butter', 4),
+        art(660, 130, 56, 'sparkle', 'butter'),
+        list(60, 214, 380, 'An hour before', 'lilac', ['Dim the lights', 'Phone on charge', 'Tidy one thing', 'Warm shower']),
+        list(460, 214, 380, 'In bed', 'sky', ['Slow breaths', 'A few pages', 'Lights out']),
+        write(60, 560, 780, 300, 'Worries parked until morning', 'butter'),
+        write(60, 880, 780, 270, 'Three good things today', 'rose'),
+      ],
+    }),
+  },
+  {
+    id: 'dream-journal',
+    subject: 'Sleep',
+    name: 'Dream journal',
+    description: 'Write the dream down before it fades, with how you slept and what it might mean.',
+    size: 'landscape',
+    build: () => ({
+      background: paper(8, 'dots'),
+      elements: [
+        title(50, 30, 700, 'Dream journal'),
+        art(1040, 20, 110, 'cloud', 'lilac', -4),
+        art(990, 80, 56, 'sparkle', 'butter'),
+        write(50, 160, 700, 470, 'Last night I dreamed', 'lilac'),
+        table(50, 650, 700, 200, 'How I slept', 'sky', ['Bedtime', 'Woke up', 'Rested?'], blank(1)),
+        write(780, 160, 370, 330, 'How it felt', 'rose'),
+        write(780, 510, 370, 340, 'What it might mean', 'mint'),
+      ],
+    }),
+  },
+
+  // ----- sports and fitness
+  sportLog('walking', 'Walking log', 'Walking', 'mountain', 'sage', ['Date', 'Steps', 'Route', 'With'], 'Routes to try', 3),
+  {
+    id: 'workout-week',
+    subject: 'Sports and fitness',
+    name: 'Weekly workout plan',
+    description: 'One workout per day with minutes and a tick, plus a warm-up and how your body feels.',
+    size: 'landscape',
+    build: (ctx) => ({
+      background: paper(7, 'grid'),
+      elements: [
+        title(50, 30, 700, 'Workout plan'),
+        sub(54, 132, 600, `Week of ${weekStart(ctx)}`),
+        art(1036, 30, 110, 'dumbbell', 'coral', -8),
+        table(50, 190, 700, 660, '', 'coral', ['Workout', 'Minutes', 'Done'], weekDays(ctx)),
+        list(780, 190, 370, 'Warm-up', 'butter', ['Jumping jacks', 'Arm circles', 'Leg swings']),
+        write(780, 480, 370, 370, 'How my body feels', 'mint'),
+      ],
+    }),
+  },
+  {
+    id: 'personal-bests',
+    subject: 'Sports and fitness',
+    name: 'Personal bests',
+    description: 'Your best times and records, the next challenges and what you’re proud of.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(4),
+      elements: [
+        tape(60, 44, 240, 'butter', 'stars', -3),
+        title(60, 60, 640, 'Personal bests'),
+        art(724, 40, 120, 'trophy', 'butter', 6),
+        table(60, 200, 780, 520, '', 'butter', ['Activity', 'Best', 'Date'], ['5 km run', 'Longest walk', 'Plank', 'Push-ups', 'Swim laps', '', '']),
+        list(60, 746, 380, 'Next challenges', 'rose', 4),
+        write(460, 746, 380, 404, 'What I’m proud of', 'mint'),
+      ],
+    }),
+  },
+
+  // ----- water
+  {
+    id: 'water-glasses',
+    subject: 'Water',
+    name: 'Eight glasses a day',
+    description: 'A box for every glass on every day of the week, with tips that help.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(7, 'plain'),
+      elements: [
+        title(60, 50, 700, 'Eight glasses'),
+        tape(600, 76, 240, 'sky', 'waves', 4),
+        sub(62, 150, 700, 'Tick a box for every glass.'),
+        table(60, 210, 780, 560, '', 'sky', ['1', '2', '3', '4', '5', '6', '7', '8'], weekDays(ctx)),
+        list(60, 796, 380, 'Tips that help', 'mint', ['Bottle by the bed', 'A glass with every meal', 'Lemon or mint']),
+        write(460, 796, 380, 354, 'Notes', 'butter'),
+      ],
+    }),
+  },
+  {
+    id: 'water-month',
+    subject: 'Water',
+    name: 'Water month',
+    description: 'Glasses per day for the whole month, beside your water tracker.',
+    size: 'landscape',
+    needs: ['Water'],
+    build: (ctx) => ({
+      background: paper(7),
+      elements: [
+        title(50, 30, 700, `${monthName(ctx.today)} water`),
+        month(50, 150, 700, 700, 'sky', ctx.today),
+        track(780, 150, 370, ctx.tracker('Water'), { look: 'progress' }),
+        art(1050, 760, 90, 'sparkle', 'sky'),
+      ],
+    }),
+  },
+  {
+    id: 'water-plan',
+    subject: 'Water',
+    name: 'Drink more water',
+    description: 'Why it matters to you, a simple plan, flavour ideas and a week of check-ins.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(6),
+      elements: [
+        title(60, 50, 700, 'Drink more water'),
+        art(744, 40, 100, 'watermelon', 'red', 10),
+        write(60, 196, 780, 190, 'Why I want to', 'sky', false),
+        list(60, 406, 380, 'My plan', 'mint', ['A glass when I wake up', 'Bottle in my bag', 'A glass before meals', 'Herbal tea at night']),
+        write(460, 406, 380, 310, 'Flavour ideas', 'peach'),
+        table(60, 750, 780, 400, 'This week', 'sky', shortDays(ctx), ['Morning', 'Afternoon', 'Evening']),
+      ],
+    }),
+  },
+
+  // ----- books
+  {
+    id: 'reading-challenge',
+    subject: 'Books',
+    name: 'Reading challenge',
+    description: 'Forty blank books for the year: write each title on a spine and star it when it’s read.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(9),
+      elements: [
+        title(60, 56, 680, 'Reading challenge', { size: 62 }),
+        title(62, 150, 780, `${ctx.today.getFullYear()}: forty books. Star each one when you finish it.`, { font: 'clean', size: 26, color: SOFT }),
+        art(744, 40, 100, 'bookstack', 'rose', 6),
+        shelf(60, 206, 780, 944, 40, 10),
+      ],
+    }),
+  },
+  {
+    id: 'reading-log-table',
+    subject: 'Books',
+    name: 'Reading list',
+    description: 'Title, author, pages and stars for every book, plus genres to try and a favourite quote.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(0, 'lines'),
+      elements: [
+        title(60, 50, 640, 'Reading list'),
+        art(730, 40, 110, 'glasses', 'butter', -6),
+        table(60, 196, 780, 700, '', 'sage', ['Title', 'Author', 'Pages', 'Stars'], blank(12)),
+        list(60, 920, 380, 'Genres to try', 'lilac', 3),
+        write(460, 920, 380, 230, 'A quote I loved', 'rose'),
+      ],
+    }),
+  },
+  {
+    id: 'book-club',
+    subject: 'Books',
+    name: 'Book club',
+    description: 'This month’s book, when and where you meet, questions to discuss and what’s next.',
+    size: 'landscape',
+    build: () => ({
+      background: paper(2),
+      elements: [
+        title(50, 30, 700, 'Book club'),
+        art(1040, 24, 110, 'openbook', 'rose', 6),
+        write(50, 160, 540, 120, 'This month’s book', 'rose', false),
+        table(610, 160, 540, 120, '', 'butter', ['Date', 'Where', 'Host'], blank(1)),
+        write(50, 300, 540, 550, 'Questions to talk about', 'sky'),
+        write(610, 300, 540, 340, 'What I thought', 'peach'),
+        list(610, 660, 540, 'Next picks', 'mint', 2),
+      ],
+    }),
+  },
+
+  // ----- goals
+  {
+    id: 'smart-goal',
+    subject: 'Goals',
+    name: 'SMART goal',
+    description: 'Turn a wish into a plan: specific, measurable, achievable, relevant, with a date.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(1, 'grid'),
+      elements: [
+        title(60, 50, 640, 'SMART goal'),
+        art(720, 40, 120, 'banner', 'mint', -6),
+        write(60, 190, 780, 180, 'Specific: what exactly?', 'rose'),
+        write(60, 386, 780, 180, 'Measurable: how will I know?', 'peach'),
+        write(60, 582, 780, 180, 'Achievable: is it realistic?', 'butter'),
+        write(60, 778, 780, 180, 'Relevant: why does it matter now?', 'mint'),
+        write(60, 974, 780, 176, 'Time-bound: by when?', 'sky'),
+      ],
+    }),
+  },
+  {
+    id: 'vision-board',
+    subject: 'Goals',
+    name: 'Vision board',
+    description: 'Six photo spots for the life you’re building: home, health, work, love, travel and you.',
+    size: 'landscape',
+    build: () => {
+      const spots: [number, number, string, number, string, TapePattern][] = [
+        [50, 166, 'Home', -2, 'peach', 'gingham'],
+        [425, 150, 'Health', 2, 'mint', 'dots'],
+        [800, 166, 'Work', -1, 'sky', 'stripes'],
+        [60, 508, 'Love', 2, 'rose', 'hearts'],
+        [430, 520, 'Travel', -2, 'butter', 'triangles'],
+        [800, 506, 'Me', 2, 'lilac', 'stars'],
+      ];
+      return {
+        background: paper(9, 'plain'),
+        elements: [
+          title(50, 26, 700, 'Vision board'),
+          art(1060, 20, 90, 'sparkle', 'butter'),
+          ...spots.flatMap(([x, y, name, rot, color, pattern]) => [box(x, y, 340, 300, name, rot), tape(x + 110, y - 18, 130, color, pattern, rot * -2)]),
+        ],
+      };
+    },
+  },
+  {
+    id: 'goal-steps',
+    subject: 'Goals',
+    name: 'Goal steps',
+    description: 'Break one goal into small steps with dates, a reward and who can help.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(5),
+      elements: [
+        title(60, 50, 640, 'Small steps'),
+        art(724, 40, 120, 'arrow', 'rose', -10),
+        write(60, 186, 780, 110, 'The goal', 'butter', false),
+        table(60, 316, 780, 520, 'Steps', 'mint', ['Step', 'By when', 'Done'], blank(8)),
+        write(60, 856, 380, 140, 'My reward', 'rose', false),
+        write(460, 856, 380, 140, 'Who can help', 'sky', false),
+        write(60, 1016, 780, 134, 'Notes', 'lilac'),
+      ],
+    }),
+  },
+
+  // ----- gratitude
+  {
+    id: 'gratitude-jar',
+    subject: 'Gratitude',
+    name: 'Gratitude jar',
+    description: 'Little notes for the jar, a person, a place, something small and a look back at the week.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(2, 'plain'),
+      elements: [
+        title(60, 50, 640, 'Gratitude jar'),
+        art(730, 44, 110, 'heart', 'rose', 8),
+        list(60, 196, 500, 'Notes for the jar', 'rose', 8),
+        write(590, 196, 250, 250, 'A person', 'butter'),
+        write(590, 466, 250, 240, 'A place', 'mint'),
+        write(590, 726, 250, 424, 'Something small', 'lilac'),
+        write(60, 760, 500, 390, 'Looking back on this week', 'sky'),
+      ],
+    }),
+  },
+  {
+    id: 'thanks-month',
+    subject: 'Gratitude',
+    name: 'Thirty days of thanks',
+    description: 'One thing you’re thankful for on every day of the month, and the best day.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(4),
+      elements: [
+        title(60, 56, 700, '30 days of thanks', { size: 64 }),
+        tape(620, 150, 220, 'rose', 'hearts', 3),
+        month(60, 196, 780, 700, 'rose', ctx.today),
+        write(60, 920, 780, 230, 'The best day this month', 'butter'),
+      ],
+    }),
+  },
+  {
+    id: 'thank-you-notes',
+    subject: 'Gratitude',
+    name: 'Thank-you notes',
+    description: 'Four little cards to write to the people who made your week better.',
+    size: 'landscape',
+    build: () => {
+      const cards: [number, number, number, string, string, TapePattern][] = [
+        [50, 176, -1.5, 'rose', 'rose', 'stripes'],
+        [610, 186, 1.5, 'butter', 'butter', 'dots'],
+        [56, 522, 1, 'mint', 'mint', 'gingham'],
+        [606, 530, -1, 'sky', 'sky', 'stars'],
+      ];
+      return {
+        background: paper(9),
+        elements: [
+          title(50, 26, 700, 'Thank-you notes'),
+          art(1050, 20, 100, 'speech', 'rose', -6),
+          ...cards.flatMap(([x, y, rot, head, tapeColor, pattern]) => [
+            { ...write(x, y, 540, 320, 'Dear …', head), rotation: rot },
+            tape(x + 200, y - 18, 140, tapeColor, pattern, -rot * 2),
+          ]),
+        ],
+      };
+    },
+  },
+
+  // ----- memories
+  {
+    id: 'photo-wall',
+    subject: 'Memories',
+    name: 'Photo wall',
+    description: 'Six photo spots pinned at playful angles, like a wall of favourite pictures.',
+    size: 'landscape',
+    build: () => {
+      const spots: [number, number, number, string, TapePattern][] = [
+        [60, 160, -3, 'rose', 'hearts'],
+        [430, 150, 2, 'butter', 'stripes'],
+        [800, 166, -2, 'mint', 'dots'],
+        [70, 500, 2, 'sky', 'stars'],
+        [440, 512, -2, 'lilac', 'confetti'],
+        [806, 496, 3, 'peach', 'gingham'],
+      ];
+      return {
+        background: paper(0, 'plain'),
+        elements: [
+          title(50, 26, 700, 'Favourite pictures'),
+          ...spots.flatMap(([x, y, rot, color, pattern]) => [box(x, y, 330, 300, 'A photo goes here', rot), tape(x + 100, y - 18, 130, color, pattern, -rot)]),
+        ],
+      };
+    },
+  },
+  {
+    id: 'year-in-memories',
+    subject: 'Memories',
+    name: 'A year of memories',
+    description: 'One box for each month: the moment you want to remember from it.',
+    size: 'portrait',
+    build: (ctx) => {
+      const colors = ['sky', 'rose', 'mint', 'butter', 'lilac', 'peach'];
+      const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(LOCALE, { month: 'long' }));
+      return {
+        background: paper(9),
+        elements: [
+          title(60, 50, 760, `${ctx.today.getFullYear()} in memories`),
+          ...months.map((m, i) => write(60 + (i % 3) * 265, 196 + Math.floor(i / 3) * 240, 250, 226, m, colors[i % colors.length])),
+        ],
+      };
+    },
+  },
+  {
+    id: 'birthday',
+    subject: 'Memories',
+    name: 'Birthday page',
+    description: 'A photo spot, who celebrated, the best moment, gifts, wishes and a note for next year.',
+    size: 'portrait',
+    build: () => ({
+      background: paper(2),
+      elements: [
+        title(60, 50, 640, 'Happy birthday'),
+        art(730, 40, 110, 'gift', 'rose', 6),
+        art(680, 120, 56, 'sparkle', 'butter'),
+        box(64, 206, 410, 360, 'A photo goes here', -2),
+        tape(190, 186, 150, 'butter', 'confetti', -4),
+        write(500, 200, 340, 176, 'Who celebrated', 'butter'),
+        write(500, 394, 340, 176, 'Best moment', 'mint'),
+        list(60, 600, 380, 'Gifts', 'rose', 4),
+        write(460, 600, 380, 310, 'Wishes for this year', 'lilac'),
+        write(60, 940, 780, 210, 'A note to read next birthday', 'sky'),
+      ],
+    }),
+  },
+
+  // ----- money
+  {
+    id: 'bills',
+    subject: 'Money',
+    name: 'Bills tracker',
+    description: 'Every regular bill with its due date, amount and a paid column, plus what’s coming up.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(6, 'grid'),
+      elements: [
+        title(60, 50, 640, 'Bills'),
+        sub(62, 150, 600, ctx.today.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
+        art(730, 44, 110, 'gelt', 'butter', 8),
+        table(60, 214, 780, 620, '', 'mint', ['Bill', 'Due', 'Amount', 'Paid'], ['Rent', 'Electricity', 'Water', 'Phone', 'Internet', 'Insurance', 'Subscriptions', '', '']),
+        list(60, 856, 380, 'Coming up', 'rose', 4),
+        write(460, 856, 380, 294, 'Notes', 'butter'),
+      ],
+    }),
+  },
+  {
+    id: 'no-spend',
+    subject: 'Money',
+    name: 'No-spend month',
+    description: 'Mark every day without extra spending, set your rules and watch the savings add up.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(5),
+      elements: [
+        tape(60, 44, 240, 'mint', 'checker', -3),
+        title(60, 60, 700, 'No-spend month'),
+        month(60, 196, 780, 630, 'mint', ctx.today),
+        list(60, 850, 380, 'My rules', 'butter', ['Groceries are fine', 'Bills are fine', 'No takeaway', 'No online shopping']),
+        write(460, 850, 380, 300, 'Money saved', 'rose'),
+      ],
+    }),
+  },
+  {
+    id: 'wish-list',
+    subject: 'Money',
+    name: 'Wish list',
+    description: 'Things you’d love, what they cost, what you’ve saved, and the ones you bought.',
+    size: 'landscape',
+    build: () => ({
+      background: paper(2, 'grid'),
+      elements: [
+        title(50, 30, 700, 'Wish list'),
+        art(1040, 24, 110, 'star', 'butter', 8),
+        table(50, 160, 740, 690, '', 'rose', ['Item', 'Price', 'Saved', 'Bought'], blank(10)),
+        write(820, 160, 330, 400, 'Why I want it', 'butter'),
+        list(820, 580, 330, 'Bought it!', 'mint', 2),
+      ],
+    }),
+  },
+
+  // ----- habits
+  {
+    id: 'habit-month',
+    subject: 'Habits',
+    name: 'Habit month grid',
+    description: 'Name up to six habits, then mark each one on every day of the month.',
+    size: 'landscape',
+    build: (ctx) => {
+      const days = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => String(from + i));
+      const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+      return {
+        background: paper(1),
+        elements: [
+          title(50, 26, 700, `${monthName(ctx.today)} habits`),
+          tape(930, 56, 220, 'lilac', 'stitch', 3),
+          table(50, 150, 340, 700, 'My habits', 'butter', ['Habit'], letters),
+          table(410, 150, 740, 340, 'Days 1 to 15', 'mint', days(1, 15), letters),
+          table(410, 510, 740, 340, 'Days 16 to 31', 'sky', days(16, 31), letters),
+        ],
+      };
+    },
+  },
+  {
+    id: 'habit-garden',
+    subject: 'Habits',
+    name: 'Habit garden',
+    description: 'Two of your trackers as growing plants: keep the streak going and watch them bloom.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(5, 'plain'),
+      elements: [
+        title(60, 50, 700, 'Habit garden'),
+        art(730, 40, 110, 'tulip', 'rose', 6),
+        ...(ctx.trackerIds.length
+          ? [
+              ...ctx.trackerIds.slice(0, 2).map((id, i) => track(60 + i * 400, 196, 380, id, { look: 'garden' })),
+              write(60, 790, 780, 360, 'How my garden is growing', 'mint'),
+            ]
+          : [title(60, 240, 780, 'Add a tracker first, then use the Tracker tool in Edit to place it here.', { font: 'clean', size: 34, color: SOFT })]),
+      ],
+    }),
+  },
+  {
+    id: 'daily-habits',
+    subject: 'Habits',
+    name: 'Daily habits checklist',
+    description: 'Morning, daytime and evening habits, a week of ticks and a reward for a full week.',
+    size: 'portrait',
+    build: (ctx) => ({
+      background: paper(0),
+      elements: [
+        title(60, 50, 640, 'Daily habits'),
+        art(730, 44, 110, 'sun', 'butter'),
+        list(60, 200, 250, 'Morning', 'butter', 3),
+        list(325, 200, 250, 'Daytime', 'mint', 3),
+        list(590, 200, 250, 'Evening', 'lilac', 3),
+        table(60, 490, 780, 500, 'This week', 'mint', ['Habit', ...shortDays(ctx)], blank(8)),
+        write(60, 1010, 780, 140, 'Reward for a full week', 'rose', false),
+      ],
+    }),
+  },
 ];
 
 /** A complete page from a template. Use `createPage(…, from: thisPage)` to save it. */

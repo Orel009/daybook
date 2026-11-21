@@ -729,6 +729,10 @@ button:disabled { cursor: default; opacity: 0.45; }
 /* widgets are laid out at normal app size, then enlarged to read well on the sheet */
 .pg-tracker { zoom: 1.6; padding: 16px; box-shadow: 2px 3px 0 var(--shade); }
 .pg-tracker.is-missing { color: var(--ink-soft); }
+/* a garden on a page: plant above the words, so neither gets squeezed */
+.pg-tracker .garden.is-compact { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; gap: 8px; }
+.pg-tracker .garden.is-compact .garden-stage { width: 130px; }
+.pg-tracker .garden.is-compact .garden-info { width: 100%; }
 /* keep the year grid short enough to share a page */
 .pg-tracker .px.is-compact .px-year .px-cell { height: 7px; }
 .pg-tracker .px.is-compact .px-num { height: 7px; line-height: 7px; font-size: 0.4rem; padding-right: 3px; }
@@ -751,7 +755,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .pp-add { align-self: flex-start; margin: 4px 16px 12px; padding: 6px 4px; border: 0; background: none; color: #6f6180; font: inherit; font-weight: 700; font-size: 22px; }
 .pp-checklist:not(:has(.pp-add)) ul { padding-bottom: 12px; }
 .pp-grid { flex: 1; min-height: 0; display: grid; }
-.pp-th { padding: 6px 8px; border-right: 2px solid #3a2b47; border-bottom: 2px solid #3a2b47; font-weight: 800; font-size: 22px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-th { padding: 6px 3px; border-right: 2px solid #3a2b47; border-bottom: 2px solid #3a2b47; font-weight: 800; font-size: 22px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pp-th.is-plain { background: #f4eff8; }
 .pp-rowlabel { display: flex; align-items: center; padding: 4px 10px; border-right: 2px solid #3a2b47; border-bottom: 2px solid rgb(58 43 71 / 0.3); font-weight: 800; font-size: 22px; background: #f4eff8; }
 .pp-td { min-width: 0; min-height: 0; padding: 5px 8px; border-right: 2px solid rgb(58 43 71 / 0.3); border-bottom: 2px solid rgb(58 43 71 / 0.3); font-size: 22px; overflow: hidden; }

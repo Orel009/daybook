@@ -382,7 +382,11 @@ button:disabled { cursor: default; opacity: 0.45; }
   background: var(--paper);
 }
 .mini-bar i { display: block; height: 100%; }
-@media (max-width: 420px) { .mini-bar { display: none; } }
+@media (max-width: 420px) {
+  .mini-bar { display: none; }
+  .preset { padding: 8px 10px; font-size: 0.95rem; }
+  .preset .dot { width: 38px; height: 38px; font-size: 1.1rem; }
+}
 
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .week-day { display: grid; justify-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
@@ -417,6 +421,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 
 .empty {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 14px;
   text-align: center;
@@ -436,7 +441,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 }
 .empty p { color: var(--ink-soft); max-width: 44ch; }
 
-.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; max-width: 720px; margin-top: 6px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 12px; width: 100%; max-width: 720px; margin-top: 6px; }
 .preset {
   display: flex;
   align-items: center;
@@ -924,8 +929,8 @@ button:disabled { cursor: default; opacity: 0.45; }
 @keyframes bk-single-prev { from { transform: rotateY(-105deg); opacity: 0; } 25% { opacity: 1; } to { transform: rotateY(0); opacity: 1; } }
 @keyframes bk-shade { 50% { opacity: 1; } }
 
-.bk-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 22px auto 0; text-align: center; }
-.bk-controls strong { min-width: 9.5em; font-family: var(--font-display); font-size: 1.05rem; }
+.bk-controls { display: flex; align-items: center; justify-content: center; gap: 10px 16px; flex-wrap: wrap; margin: 22px auto 0; text-align: center; }
+.bk-controls strong { min-width: 0; font-family: var(--font-display); font-size: 1.05rem; }
 .bk-pages { display: grid; gap: 10px; margin: 18px auto 0; max-width: 720px; }
 .bk-pages li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--raised); border: 1.5px solid var(--ink); border-radius: 14px; }
 .bk-pages li > span:first-child { display: grid; min-width: 0; }

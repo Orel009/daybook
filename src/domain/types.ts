@@ -52,6 +52,7 @@ export interface TrackerDefinition {
   sortOrder: number;
   createdAt: string; // ISO timestamp
   updatedAt: string;
+  deletedAt?: string; // tombstone, kept so the delete reaches other devices
 }
 
 export interface TrackerEntry {
@@ -62,7 +63,7 @@ export interface TrackerEntry {
   value: EntryValue;
   note?: string;
   updatedAt: string;
-  deletedAt?: string; // tombstone, kept in storage for future sync
+  deletedAt?: string; // tombstone, kept so the delete reaches other devices
 }
 
 export interface Category {
@@ -71,6 +72,7 @@ export interface Category {
   emoji: string;
   builtIn?: boolean;
   updatedAt: string;
+  deletedAt?: string; // tombstone
 }
 
 export type ThemeId = 'scrapbook' | 'dark' | 'minimal';

@@ -4,15 +4,40 @@ import { newId } from '../domain/types';
 import * as db from './db';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, type TrackerDraft } from './defaults';
 import { assetIdsOf, blankPage, copyPage, type Page, type PageSize } from '../domain/pages';
-import { exportAssets, importAssets, removeUnusedAssets, type BackupAsset } from './assets';
+import { exportAssets, forgetAllAssets, importAssets, removeUnusedAssets, type BackupAsset } from './assets';
+import { markDirty, markManyDirty } from './outbox';
+import type { SyncKind } from './merge';
 
 const now = () => new Date().toISOString();
-const save = (store: db.StoreName, value: unknown) => {
-  db.put(store, value).catch((err) => console.error('Could not save', store, err));
+
+type DataStore = 'trackers' | 'entries' | 'categories' | 'pages' | 'meta';
+const KIND: Record<DataStore, SyncKind> = { trackers: 'tracker', entries: 'entry', categories: 'category', pages: 'page', meta: 'settings' };
+export const SETTINGS_ID = 'settings';
+
+/** Saves on this device, then notes the change for cloud sync. */
+const save = <T extends { id?: string; key?: string }>(store: DataStore, value: T) => {
+  db.put(store, value)
+    .then(() => markDirty(KIND[store], store === 'meta' ? SETTINGS_ID : value.id!))
+    .catch((err) => console.error('Could not save', store, err));
+};
+const saveMany = (store: DataStore, values: { id: string }[]) => {
+  db.putMany(store, values)
+    .then(() => markManyDirty(values.map((v) => ({ kind: KIND[store], id: v.id }))))
+    .catch((err) => console.error('Could not save', store, err));
 };
 
+/** A record pulled from the cloud, already in its local shape. */
+export interface IncomingRecord {
+  kind: SyncKind;
+  id: string;
+  record: { updatedAt: string; deletedAt?: string };
+}
+
+const live = <T extends { deletedAt?: string }>(list: T[]) => list.filter((x) => !x.deletedAt);
+const byOrder = <T extends { sortOrder: number }>(list: T[]) => [...list].sort((a, b) => a.sortOrder - b.sortOrder);
+
 /** Every photo still in use: on a page, or kept in "My stickers". */
-const usedAssets = (pages: Page[], settings: Settings): string[] => [
+export const usedAssets = (pages: Page[], settings: Settings): string[] => [
   ...pages.flatMap(assetIdsOf),
   ...(settings.customStickers ?? []).map((c) => c.assetId),
 ];
@@ -43,6 +68,7 @@ interface State {
   updateTracker: (id: string, patch: Partial<TrackerDefinition>) => void;
   deleteTracker: (id: string) => void;
   addCategory: (name: string, emoji: string) => Category;
+  removeCategory: (id: string) => void;
   addEntry: (trackerId: string, date: DateKey, value: EntryValue, note?: string) => void;
   updateEntry: (id: string, patch: Pick<TrackerEntry, 'value' | 'note' | 'date'>) => void;
   removeEntry: (id: string) => void;
@@ -54,6 +80,10 @@ interface State {
   movePage: (id: string, by: 1 | -1) => void;
   exportBackup: () => Promise<BackupFile>;
   importBackup: (file: BackupFile) => Promise<void>;
+  /** Writes records pulled from the cloud, without marking them for upload. */
+  applyRemote: (incoming: IncomingRecord[]) => Promise<void>;
+  /** Empties the book on this device (used when logging out). */
+  clearLocal: () => Promise<void>;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -78,14 +108,14 @@ export const useStore = create<State>((set, get) => ({
     set({
       ready: true,
       persistent: db.isPersistent(),
-      trackers: trackers.sort((a, b) => a.sortOrder - b.sortOrder),
-      entries: entries.filter((e) => !e.deletedAt),
-      categories: [...DEFAULT_CATEGORIES, ...custom],
+      trackers: byOrder(live(trackers)),
+      entries: live(entries),
+      categories: [...DEFAULT_CATEGORIES, ...live(custom)],
       settings: { ...DEFAULT_SETTINGS, ...stored },
-      pages: pages.sort((a, b) => a.sortOrder - b.sortOrder),
+      pages: byOrder(live(pages)),
     });
     void db.requestDurableStorage();
-    void removeUnusedAssets(new Set(usedAssets(pages, { ...DEFAULT_SETTINGS, ...stored })));
+    void removeUnusedAssets(new Set(usedAssets(live(pages), { ...DEFAULT_SETTINGS, ...stored })));
   },
 
   createTracker: (draft) => {
@@ -110,14 +140,18 @@ export const useStore = create<State>((set, get) => ({
     save('trackers', next);
   },
 
+  // Deletes leave tombstones in storage so they reach other devices.
   deleteTracker: (id) => {
+    const tracker = get().trackers.find((t) => t.id === id);
+    if (!tracker) return;
+    const at = now();
     const gone = get().entries.filter((e) => e.trackerId === id);
     set((s) => ({
       trackers: s.trackers.filter((t) => t.id !== id),
       entries: s.entries.filter((e) => e.trackerId !== id),
     }));
-    db.remove('trackers', id).catch(console.error);
-    for (const e of gone) db.remove('entries', e.id).catch(console.error);
+    save('trackers', { ...tracker, deletedAt: at, updatedAt: at });
+    saveMany('entries', gone.map((e) => ({ ...e, deletedAt: at, updatedAt: at })));
   },
 
   addCategory: (name, emoji) => {
@@ -125,6 +159,13 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({ categories: [...s.categories, c] }));
     save('categories', c);
     return c;
+  },
+
+  removeCategory: (id) => {
+    const c = get().categories.find((x) => x.id === id);
+    if (!c || c.builtIn) return;
+    set((s) => ({ categories: s.categories.filter((x) => x.id !== id) }));
+    save('categories', { ...c, deletedAt: now(), updatedAt: now() });
   },
 
   addEntry: (trackerId, date, value, note) => {
@@ -177,9 +218,11 @@ export const useStore = create<State>((set, get) => ({
   },
 
   deletePage: (id) => {
+    const page = get().pages.find((p) => p.id === id);
+    if (!page) return;
     set((s) => ({ pages: s.pages.filter((p) => p.id !== id) }));
-    db.remove('pages', id).catch(console.error);
-    void removeUnusedAssets(new Set(usedAssets(get().pages, get().settings)));
+    save('pages', { ...page, deletedAt: now(), updatedAt: now() });
+    void removeUnusedAssets(new Set(usedAssets(get().pages, get().settings)), true);
   },
 
   movePage: (id, by) => {
@@ -224,12 +267,73 @@ export const useStore = create<State>((set, get) => ({
     });
     await importAssets(file.assets ?? []);
     set({
-      trackers: [...file.trackers].sort((a, b) => a.sortOrder - b.sortOrder),
-      entries: file.entries.filter((e) => !e.deletedAt),
-      categories: [...DEFAULT_CATEGORIES, ...custom],
+      trackers: byOrder(live(file.trackers)),
+      entries: live(file.entries),
+      categories: [...DEFAULT_CATEGORIES, ...live(custom)],
       settings,
-      pages: [...(file.pages ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+      pages: byOrder(live(file.pages ?? [])),
     });
+    // When logged in, the restored book is merged into the cloud copy.
+    await markManyDirty([
+      ...file.trackers.map((x) => ({ kind: 'tracker' as const, id: x.id })),
+      ...file.entries.map((x) => ({ kind: 'entry' as const, id: x.id })),
+      ...custom.map((x) => ({ kind: 'category' as const, id: x.id })),
+      ...(file.pages ?? []).map((x) => ({ kind: 'page' as const, id: x.id })),
+      ...(file.assets ?? []).map((x) => ({ kind: 'asset' as const, id: x.id })),
+      { kind: 'settings', id: SETTINGS_ID },
+    ]);
+  },
+
+  applyRemote: async (incoming) => {
+    if (!incoming.length) return;
+    const s = get();
+    // This device may have changed a record while the pull was running: keep whichever is newer.
+    const current = (kind: SyncKind, id: string): { updatedAt: string } | undefined =>
+      kind === 'tracker' ? s.trackers.find((x) => x.id === id)
+      : kind === 'entry' ? s.entries.find((x) => x.id === id)
+      : kind === 'category' ? s.categories.find((x) => x.id === id)
+      : kind === 'page' ? s.pages.find((x) => x.id === id)
+      : s.settings;
+    const fresh = incoming.filter((r) => {
+      const c = current(r.kind, r.id);
+      return !c?.updatedAt || Date.parse(r.record.updatedAt) >= Date.parse(c.updatedAt);
+    });
+    const of = <T>(kind: SyncKind) => fresh.filter((r) => r.kind === kind).map((r) => r.record as unknown as T);
+    const merge = <T extends { id: string; deletedAt?: string }>(list: T[], changes: T[]) => {
+      const byId = new Map(list.map((x) => [x.id, x]));
+      for (const c of changes) {
+        if (c.deletedAt) byId.delete(c.id);
+        else byId.set(c.id, c);
+      }
+      return [...byId.values()];
+    };
+
+    const trackers = of<TrackerDefinition>('tracker');
+    const entries = of<TrackerEntry>('entry');
+    const categories = of<Category>('category').filter((c) => !c.builtIn);
+    const pages = of<Page>('page');
+    const settings = of<Settings>('settings').at(-1);
+
+    await Promise.all([
+      db.putMany('trackers', trackers),
+      db.putMany('entries', entries),
+      db.putMany('categories', categories),
+      db.putMany('pages', pages),
+      settings ? db.put('meta', { key: 'settings', value: settings }) : undefined,
+    ]);
+    set((st) => ({
+      trackers: trackers.length ? byOrder(merge(st.trackers, trackers)) : st.trackers,
+      entries: entries.length ? merge(st.entries, entries) : st.entries,
+      categories: categories.length ? merge(st.categories, categories) : st.categories,
+      pages: pages.length ? byOrder(merge(st.pages, pages)) : st.pages,
+      settings: settings ? { ...DEFAULT_SETTINGS, ...settings } : st.settings,
+    }));
+  },
+
+  clearLocal: async () => {
+    await db.replaceAll({ trackers: [], entries: [], categories: [], meta: [], pages: [], assets: [], outbox: [] });
+    forgetAllAssets();
+    set({ trackers: [], entries: [], categories: DEFAULT_CATEGORIES, settings: DEFAULT_SETTINGS, pages: [] });
   },
 }));
 

@@ -4,6 +4,8 @@ import { LOCALE, todayKey } from '../domain/dates';
 import type { ThemeId } from '../domain/types';
 import { PageHeader } from '../ui/Layout';
 import { Sheet } from '../ui/Sheet';
+import { useSync } from '../data/sync';
+import { AccountSection } from './Account';
 
 const THEMES: { id: ThemeId; name: string; hint: string }[] = [
   { id: 'scrapbook', name: 'Scrapbook', hint: 'Dotted paper, tape and soft colour' },
@@ -22,6 +24,7 @@ export function Settings() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<BackupFile | null>(null);
   const [message, setMessage] = useState('');
+  const signedIn = useSync((s) => s.status === 'signed-in');
 
   const download = async () => {
     try {
@@ -90,11 +93,13 @@ export function Settings() {
         </div>
       </section>
 
+      <AccountSection />
+
       <section className="card form-card">
         <h2>Backup</h2>
         <p>
-          Everything is stored on this device only: {counts.t} tracker{counts.t === 1 ? '' : 's'} and {counts.e}{' '}
-          {counts.e === 1 ? 'entry' : 'entries'}, plus {pageCount} journal page{pageCount === 1 ? '' : 's'} with their photos. Save a backup now and then so nothing is lost if the tablet is reset or replaced.
+          Everything is stored on this device{signedIn ? ' and synced to your account' : ' only'}: {counts.t} tracker{counts.t === 1 ? '' : 's'} and {counts.e}{' '}
+          {counts.e === 1 ? 'entry' : 'entries'}, plus {pageCount} journal page{pageCount === 1 ? '' : 's'} with their photos. {signedIn ? 'A backup file is an extra copy you keep yourself.' : 'Save a backup now and then so nothing is lost if the tablet is reset or replaced.'}
         </p>
         {!persistent && (
           <p className="warning" role="status">

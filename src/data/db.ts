@@ -2,13 +2,14 @@
 // and writes every change through here. If IndexedDB is unavailable the app
 // still runs, just without saving – `isPersistent()` reports which.
 //
-// A future sync adapter only needs these same four operations plus the
-// `updatedAt` / `deletedAt` fields every record already carries.
+// Cloud sync (sync.ts) uses the same operations plus the `updatedAt` /
+// `deletedAt` fields every record carries, and the `outbox` store, which lists
+// what changed here and hasn't reached the cloud yet.
 
-export type StoreName = 'trackers' | 'entries' | 'categories' | 'meta' | 'pages' | 'assets';
+export type StoreName = 'trackers' | 'entries' | 'categories' | 'meta' | 'pages' | 'assets' | 'outbox';
 
 const DB_NAME = 'daybook';
-const DB_VERSION = 2; // v2 adds scrapbook pages and their photos
+const DB_VERSION = 3; // v2 adds scrapbook pages and their photos, v3 the sync outbox
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 let persistent = false;
@@ -30,6 +31,7 @@ function open(): Promise<IDBDatabase | null> {
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('pages')) db.createObjectStore('pages', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'key' });
       };
       req.onsuccess = () => {
         persistent = true;
@@ -94,6 +96,23 @@ export async function remove(store: StoreName, key: string): Promise<void> {
   await wrap(db.transaction(store, 'readwrite').objectStore(store).delete(key));
 }
 
+/** Writes several records in one transaction. */
+export async function putMany(store: StoreName, values: unknown[]): Promise<void> {
+  const db = await open();
+  if (!db || !values.length) return;
+  const tx = db.transaction(store, 'readwrite');
+  const s = tx.objectStore(store);
+  for (const v of values) s.put(v);
+  await done(tx);
+}
+
+const done = (tx: IDBTransaction) =>
+  new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+
 export async function replaceAll(data: Partial<Record<StoreName, unknown[]>>): Promise<void> {
   const db = await open();
   if (!db) return;
@@ -104,11 +123,7 @@ export async function replaceAll(data: Partial<Record<StoreName, unknown[]>>): P
     s.clear();
     for (const v of data[name] ?? []) s.put(v);
   }
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
+  await done(tx);
 }
 
 /** Ask the browser not to clear this app's data when the device runs low on space. */

@@ -222,6 +222,7 @@ export interface Page {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string; // tombstone, kept so the delete reaches other devices
 }
 
 /** Elements whose height is decided by their content, not by `h`. */

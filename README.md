@@ -22,7 +22,25 @@ The repo includes `.github/workflows/deploy.yml`, which builds the app and publi
 
 Prefer a private repo? Vercel, Netlify and Cloudflare Pages host private repos for free: import the repo, build command `npm run build`, output folder `dist`. No other settings are needed (the build uses relative paths and hash routes).
 
-Data lives in that browser's storage on the tablet. Use **Settings → Save a backup** now and then; the file restores everything, photos included, on any device.
+Data lives in that browser's storage on the tablet. Use **Settings → Save a backup** now and then; the file restores everything, photos included, on any device. Or log in under **Settings → Account** to keep a copy in the cloud (below).
+
+## Cloud sync (optional)
+
+Accounts and sync use Neon's free plan: **Neon Auth** for logins and the **Neon Data API** with Postgres Row-Level Security for storage. There is no server of our own and no database password in the app, only two public URLs:
+
+```bash
+# .env.local (not committed); on GitHub: Settings → Secrets and variables → Actions → Variables
+VITE_NEON_AUTH_URL=https://ep-….neonauth.….neon.tech/neondb/auth
+VITE_NEON_DATA_API_URL=https://ep-….apirest.….neon.tech/neondb/rest/v1
+```
+
+The tables, trigger and RLS policies are in `db/schema.sql`. Without the two variables the app builds and runs as before, without the Account section.
+
+- **Local-first.** IndexedDB stays what the app reads and writes; it works offline and without logging in. Sync copies changes in the background.
+- **Outbox.** Every local change (deletes are tombstones with `deletedAt`) is noted in the `outbox` store; a push upserts those records in batches.
+- **Pull and merge.** A pull reads rows whose `synced_at` (stamped by the server) is past the last pull. Per record, the later `updatedAt` wins (`src/data/merge.ts`, tested). The server also ignores a write older than what it holds.
+- **Photos** are re-encoded to at most 1200px WebP for the cloud. A photo deleted on one device but still used on another is uploaded again rather than lost.
+- **When.** After login, when the app opens, 2 seconds after a change, when it comes back into view and when the connection returns. Failures retry quietly.
 
 ## How it is put together
 
@@ -36,6 +54,10 @@ src/
     db.ts          IndexedDB layer
     store.ts       in-memory state + write-through persistence, backup
     assets.ts      photo compression and storage
+    outbox.ts      changes not yet sent to the cloud
+    cloud.ts       Neon Auth + Data API client
+    sync.ts        background push / pull
+    merge.ts       sync rules: who wins, cursors, photos (tested)
     defaults.ts    categories, presets, dashboard defaults
   visualizations/
     registry.ts    registerVisualization / getVisualization

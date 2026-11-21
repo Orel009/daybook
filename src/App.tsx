@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { useStore, useUi } from './data/store';
+import { startSync } from './data/sync';
 import './visualizations';
 import { Layout, EmptyState } from './ui/Layout';
 import { LogSheet } from './ui/LogSheet';
@@ -23,6 +24,11 @@ export function App() {
   useEffect(() => {
     void useStore.getState().init();
   }, []);
+
+  // Cloud sync runs in the background once the book on this device is loaded.
+  useEffect(() => {
+    if (ready) startSync();
+  }, [ready]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

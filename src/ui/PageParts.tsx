@@ -1,12 +1,14 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { useStore } from '../data/store';
 import { LOCALE, WEEKDAY_SHORT } from '../domain/dates';
+import { bingoCount, centerIndex, gridRows, isFreeTile, tileDone } from '../domain/grid';
 import {
   fontOf,
   newItem,
   type BookshelfElement,
   type BoxElement,
   type ChecklistElement,
+  type GridElement,
   type MonthElement,
   type PartTextStyle,
   type TableElement,
@@ -15,9 +17,9 @@ import {
 import { TAPE_COLORS } from '../domain/types';
 
 // Page parts that hold writing: checklists, tables, lined writing areas, a
-// month grid and a bookshelf. Three ways to draw them:
+// month grid, a bookshelf and tile grids. Three ways to draw them:
 //   static  thumbnails, shared and public pages, unselected parts in Edit
-//   view    the finished page: only quick taps (tick, star)
+//   view    the finished page: only quick taps (tick, star, mark a tile)
 //   edit    the part selected in Edit: typeable in place, with placeholders
 // Writing happens only in Edit, so a page being viewed has no text fields.
 
@@ -318,6 +320,75 @@ export function BookshelfBody({ el, mode, onChange }: PartProps<BookshelfElement
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+
+/** Tiles to mark: bingo cards, challenges, A to Z. Tap a tile to mark it; write on it in Edit. */
+export function GridBody({ el, mode, onChange }: PartProps<GridElement>) {
+  const rows = gridRows(el);
+  const center = centerIndex(el);
+  const lines = el.bingo ? bingoCount(el) : 0;
+  const [cheer, setCheer] = useState(false);
+  const seen = useRef(lines);
+  useEffect(() => {
+    // a new line made by a tap on the finished page: a short celebration
+    if (mode === 'view' && lines > seen.current) {
+      setCheer(true);
+      const t = window.setTimeout(() => setCheer(false), reducedMotion() ? 2200 : 1700);
+      seen.current = lines;
+      return () => window.clearTimeout(t);
+    }
+    seen.current = lines;
+  }, [lines, mode]);
+
+  const setTile = (i: number, patch: Partial<GridElement['tiles'][number]>) => onChange?.({ tiles: el.tiles.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
+  const canMark = mode !== 'static' && Boolean(onChange);
+  const extra = el.bingo && lines > 0 ? `${lines} bingo${lines === 1 ? '' : 's'}` : undefined;
+
+  return (
+    <div className={`pp-panel pp-tilegrid mark-${el.mark ?? 'cross'}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
+      <Head title={el.title} color={el.color} extra={extra} />
+      <div className="pp-tiles" style={{ gridTemplateColumns: `repeat(${Math.max(1, el.cols)}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+        {el.tiles.map((t, i) => {
+          const free = isFreeTile(el, i);
+          const done = tileDone(el, i);
+          const label = t.label?.trim();
+          const name = `${label ? `${label}: ` : ''}${t.text?.trim() || (free ? 'Free' : `Tile ${i + 1}`)}`;
+          const body = (
+            <>
+              {label && <span className={`pp-tile-label ${label.length > 3 ? 'is-long' : ''}`}>{label}</span>}
+              {free ? (
+                <span className="pp-tile-free" aria-hidden="true">
+                  ★<small>Free</small>
+                </span>
+              ) : mode === 'edit' ? (
+                <textarea className="pg-input pp-tile-text" value={t.text ?? ''} placeholder={label ? '' : 'Write here'} aria-label={`${label ? `${label}, ` : ''}tile ${i + 1}`} onChange={(e) => setTile(i, { text: e.target.value })} />
+              ) : (
+                <Fit className="pp-tile-text" text={t.text} />
+              )}
+              {done && !free && <span className="pp-mark" aria-hidden="true" />}
+            </>
+          );
+          const cls = `pp-tile ${done ? 'is-done' : ''} ${free ? 'is-free' : ''} ${i === center ? 'is-center' : ''}`;
+          return canMark && mode === 'view' && !free ? (
+            <button key={i} type="button" className={cls} role="checkbox" aria-checked={done} aria-label={name} onClick={() => setTile(i, { done: !t.done })}>
+              {body}
+            </button>
+          ) : (
+            <div key={i} className={cls} aria-label={mode === 'edit' ? undefined : `${name}${done ? ', done' : ''}`}>
+              {body}
+            </div>
+          );
+        })}
+      </div>
+      {cheer && (
+        <div className={`pp-bingo ${reducedMotion() ? 'is-still' : ''}`} role="status">
+          Bingo!
+        </div>
+      )}
     </div>
   );
 }

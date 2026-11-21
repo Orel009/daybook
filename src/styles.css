@@ -1136,6 +1136,7 @@ textarea { resize: vertical; line-height: 1.45; }
   text-align: var(--pp-align, inherit);
 }
 .pg-layer .pp-checklist li.is-done .pp-item-text:is(span, input) { color: #6f6180; }
+.pp-head-extra { float: right; margin-left: 12px; font-family: var(--font-body); font-weight: 800; font-size: 22px; line-height: 45px; }
 
 /* ---------- writing in place while editing ---------- */
 .pg.is-edit .pg-el.is-typing { cursor: default; }
@@ -1143,6 +1144,35 @@ textarea { resize: vertical; line-height: 1.45; }
 .pg.is-edit .pg-el.is-typing :is(input, textarea) { cursor: text; user-select: text; -webkit-user-select: text; touch-action: auto; background: rgb(255 255 255 / 0.55); box-shadow: inset 0 0 0 calc(1.5px / var(--pg-scale)) rgb(58 43 71 / 0.22); }
 .pg.is-edit .pg-el.is-typing :is(.pp-head, .pp-box-title) { cursor: grab; }
 .handle-move { left: calc(var(--hs) / -2 - 5px / var(--pg-scale)); top: calc(var(--hs) / -2 - 5px / var(--pg-scale)); cursor: grab; display: grid; place-items: center; font-size: calc(18px / var(--pg-scale)); line-height: 1; color: #3a2b47; background: #bfd6a0; }
+
+/* ---------- tile grid (bingo, challenges, A to Z) ---------- */
+.pp-tilegrid { position: relative; }
+.pp-tiles { flex: 1; min-height: 0; display: grid; }
+.pp-tile { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px; border: 0; border-right: 2px solid rgb(58 43 71 / 0.3); border-bottom: 2px solid rgb(58 43 71 / 0.3); background: none; color: inherit; font: inherit; font-size: 20px; line-height: 1.15; text-align: center; overflow: hidden; }
+.pp-tile-label { flex: none; font-family: var(--font-display); font-weight: 700; font-size: 1.5em; line-height: 1; color: #3a2b47; }
+.pp-tile-text { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; }
+.pp-tile-label + .pp-tile-text { flex: 0 1 auto; font-size: 0.82em; }
+.pg-layer textarea.pg-input.pp-tile-text { flex: 1; text-align: center; padding-top: 6px; }
+.pp-tile.is-free { background: rgb(246 219 125 / 0.35); }
+.pp-tile-free { display: grid; place-items: center; font-size: 1.9em; line-height: 1; color: #3a2b47; }
+.pp-tile-free small { font-family: var(--font-display); font-weight: 700; font-size: 0.42em; }
+.pp-mark { position: absolute; inset: 8%; pointer-events: none; }
+.mark-cross .pp-mark { background: linear-gradient(to top right, transparent calc(50% - 4px), var(--pp-mark) calc(50% - 4px), var(--pp-mark) calc(50% + 4px), transparent calc(50% + 4px)), linear-gradient(to top left, transparent calc(50% - 4px), var(--pp-mark) calc(50% - 4px), var(--pp-mark) calc(50% + 4px), transparent calc(50% + 4px)); opacity: 0.85; }
+.mark-stamp .pp-mark { inset: 12%; border: 5px solid var(--pp-mark); border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 0) 55%, var(--pp-mark) 56% 58%, rgb(255 255 255 / 0) 59%); opacity: 0.9; transform: rotate(-12deg); }
+.pp-tile.is-done { background: rgb(255 255 255 / 0.5); }
+button.pp-tile { cursor: pointer; }
+.pp-bingo { position: absolute; left: 50%; top: 50%; padding: 18px 46px; border: 4px solid #3a2b47; border-radius: 999px; background: var(--pp-mark); font-family: var(--font-display); font-weight: 700; font-size: 72px; color: #3a2b47; transform: translate(-50%, -50%) rotate(-6deg); box-shadow: 6px 8px 0 rgb(58 43 71 / 0.25); pointer-events: none; animation: pp-bingo 1.7s ease-out forwards; }
+.pp-bingo.is-still { animation: none; }
+@keyframes pp-bingo {
+  0% { transform: translate(-50%, -50%) rotate(-6deg) scale(0.4); opacity: 0; }
+  18% { transform: translate(-50%, -50%) rotate(-6deg) scale(1.12); opacity: 1; }
+  30% { transform: translate(-50%, -50%) rotate(-6deg) scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pp-bingo { animation: none; } }
+.pp-tile-label.is-long { font-family: var(--font-body); font-weight: 800; font-size: 0.95em; line-height: 1.12; overflow-wrap: anywhere; }
+.pp-tile-label.is-long + .pp-tile-text { font-family: var(--pp-font, var(--font-display)); font-size: var(--pp-size, 1em); }
 
 /* ---------- text that doesn't fit its spot (see Fit in PageParts) ----------
    The spots are given a size so overflow can be measured; text that fits is

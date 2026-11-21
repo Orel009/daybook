@@ -205,7 +205,31 @@ export interface BookshelfElement extends ElementBase, PartTextStyle {
   perShelf: number;
 }
 
+export interface GridTile {
+  /** Fixed label printed on the tile: a letter, a genre, a prompt. */
+  label?: string;
+  /** What was written on it (in Edit). */
+  text?: string;
+  /** Marked done with a tap while viewing. */
+  done?: boolean;
+}
+
+/** Tiles in rows: bingo cards, challenges, A to Z. Rows follow from the tile count. */
+export interface GridElement extends ElementBase, PartTextStyle {
+  type: 'tiles';
+  title: string;
+  color: string; // key of TAPE_COLORS, also the colour of the marks
+  cols: number;
+  tiles: GridTile[];
+  /** The middle tile of an odd square counts as done ("Free"). */
+  freeCenter?: boolean;
+  /** Count full rows, columns and diagonals, and cheer when one is made. */
+  bingo?: boolean;
+  mark?: 'cross' | 'stamp';
+}
+
 export type PageElement =
+  | GridElement
   | BookshelfElement
   | TextElement
   | PhotoElement
@@ -224,7 +248,7 @@ export const isFillable = (el: PageElement): boolean =>
 
 /** Parts that are written in (in Edit, while selected). */
 export const isWritable = (el: PageElement): boolean =>
-  el.type === 'checklist' || el.type === 'table' || el.type === 'writing' || el.type === 'month' || el.type === 'bookshelf';
+  el.type === 'checklist' || el.type === 'table' || el.type === 'writing' || el.type === 'month' || el.type === 'bookshelf' || el.type === 'tiles';
 
 export interface Page {
   id: string;
@@ -439,6 +463,45 @@ export const newBookshelf = (page: Page): BookshelfElement => ({
   books: Array.from({ length: 18 }, (_, i) => newBook(i)),
   perShelf: 9,
 });
+
+export type GridPreset = 'bingo5' | 'bingo4' | 'mini3' | 'az';
+
+export const GRID_PRESETS: { id: GridPreset; name: string }[] = [
+  { id: 'bingo5', name: 'Bingo 5×5' },
+  { id: 'bingo4', name: 'Bingo 4×4' },
+  { id: 'mini3', name: 'Mini 3×3' },
+  { id: 'az', name: 'A to Z' },
+];
+
+export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+export const newGrid = (page: Page, preset: GridPreset): GridElement => {
+  const { w: pw, h: ph } = PAGE_DIMS[page.size];
+  const shape = {
+    bingo5: { cols: 5, n: 25, w: 640, h: 700, title: 'Bingo', bingo: true, freeCenter: true, mark: 'stamp' as const },
+    bingo4: { cols: 4, n: 16, w: 600, h: 660, title: 'Bingo', bingo: true, freeCenter: false, mark: 'stamp' as const },
+    mini3: { cols: 3, n: 9, w: 480, h: 530, title: 'Mini bingo', bingo: true, freeCenter: false, mark: 'cross' as const },
+    az: { cols: 6, n: 26, w: 720, h: 700, title: 'A to Z', bingo: false, freeCenter: false, mark: 'cross' as const },
+  }[preset];
+  const w = Math.min(shape.w, pw - 80);
+  const h = Math.min(shape.h, ph - 80);
+  return {
+    id: newId(),
+    type: 'tiles',
+    x: Math.round((pw - w) / 2),
+    y: Math.round((ph - h) / 2),
+    w,
+    h,
+    rotation: 0,
+    title: shape.title,
+    color: preset === 'az' ? 'sky' : 'rose',
+    cols: shape.cols,
+    tiles: Array.from({ length: shape.n }, (_, i) => (preset === 'az' ? { label: ALPHABET[i] } : {})),
+    bingo: shape.bingo,
+    freeCenter: shape.freeCenter,
+    mark: shape.mark,
+  };
+};
 
 export const blankPage = (title: string, size: PageSize, sortOrder: number): Page => ({
   id: newId(),

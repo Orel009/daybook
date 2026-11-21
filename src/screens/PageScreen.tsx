@@ -10,6 +10,8 @@ import {
   newBookshelf,
   newBox,
   newChecklist,
+  newGrid,
+  GRID_PRESETS,
   isWritable,
   type PartTextStyle,
   newCustomSticker,
@@ -58,6 +60,7 @@ const TYPE_NAMES: Record<PageElement['type'], string> = {
   writing: 'Writing area',
   month: 'Month',
   bookshelf: 'Bookshelf',
+  tiles: 'Tile grid',
 };
 const lines = (text: string) => text.split('\n');
 
@@ -203,7 +206,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const propsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
-  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete'>(null);
+  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid'>(null);
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState('');
   const [stickerSet, setStickerSet] = useState(STICKER_SETS[0].id); // stays on the last set used
@@ -449,6 +452,9 @@ function PageEditor({ stored }: { stored: Page }) {
       <button className="pe-tool" onClick={() => addEl(newBookshelf(pageRef.current))}>
         <span aria-hidden="true">📚</span>Shelf
       </button>
+      <button className="pe-tool" onClick={() => setSheet('grid')}>
+        <span aria-hidden="true">🎯</span>Grid
+      </button>
       <button className="pe-tool" onClick={() => addEl(newBox(pageRef.current))}>
         <span aria-hidden="true">⬜</span>Box
       </button>
@@ -579,7 +585,7 @@ function PageEditor({ stored }: { stored: Page }) {
             </div>
           )}
 
-          {(selected.type === 'checklist' || selected.type === 'table' || selected.type === 'writing' || selected.type === 'box' || selected.type === 'bookshelf') && (
+          {(selected.type === 'checklist' || selected.type === 'table' || selected.type === 'writing' || selected.type === 'box' || selected.type === 'bookshelf' || selected.type === 'tiles') && (
             <label className="pe-field">
               <span>Heading</span>
               <input type="text" value={selected.title ?? ''} onChange={(e) => patchEl(selected.id, { title: e.target.value }, 'title-el')} placeholder="No heading" maxLength={40} />
@@ -671,7 +677,62 @@ function PageEditor({ stored }: { stored: Page }) {
             </>
           )}
 
-          {(selected.type === 'checklist' || selected.type === 'table' || selected.type === 'writing' || selected.type === 'month' || selected.type === 'bookshelf') && (
+          {selected.type === 'tiles' && (
+            <>
+              <div className="pe-row">
+                <div className="seg seg-small" role="radiogroup" aria-label="Mark">
+                  {([['cross', 'Cross'], ['stamp', 'Stamp']] as const).map(([m, name]) => (
+                    <button key={m} role="radio" aria-checked={(selected.mark ?? 'cross') === m} className={(selected.mark ?? 'cross') === m ? 'is-on' : ''} onClick={() => patchEl(selected.id, { mark: m })}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button className={`chip ${selected.bingo ? 'is-on' : ''}`} aria-pressed={!!selected.bingo} onClick={() => patchEl(selected.id, { bingo: !selected.bingo })}>
+                  Bingo lines
+                </button>
+                <button className={`chip ${selected.freeCenter ? 'is-on' : ''}`} aria-pressed={!!selected.freeCenter} onClick={() => patchEl(selected.id, { freeCenter: !selected.freeCenter })}>
+                  Free centre
+                </button>
+              </div>
+              <label className="pe-slider">
+                <span>Columns: {selected.cols}</span>
+                <input type="range" min={2} max={8} value={selected.cols} onChange={(e) => patchEl(selected.id, { cols: Number(e.target.value) }, 'grid-cols')} />
+              </label>
+              <label className="pe-slider">
+                <span>Tiles: {selected.tiles.length}</span>
+                <input
+                  type="range"
+                  min={4}
+                  max={64}
+                  value={selected.tiles.length}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    const tiles = selected.tiles.slice(0, n);
+                    while (tiles.length < n) tiles.push({});
+                    patchEl(selected.id, { tiles }, 'grid-tiles');
+                  }}
+                />
+              </label>
+              <label className="pe-field">
+                <span>Labels, one per tile (optional)</span>
+                <textarea
+                  rows={4}
+                  value={selected.tiles.map((t) => t.label ?? '').join('\n').replace(/\n+$/, '')}
+                  onChange={(e) => {
+                    const labels = lines(e.target.value);
+                    patchEl(selected.id, { tiles: selected.tiles.map((t, i) => ({ ...t, label: labels[i]?.trim() || undefined })) }, 'grid-labels');
+                  }}
+                />
+              </label>
+              {selected.tiles.some((t) => t.done) && (
+                <button className="btn btn-quiet btn-small" onClick={() => patchEl(selected.id, { tiles: selected.tiles.map((t) => ({ ...t, done: false })) })}>
+                  Clear all marks
+                </button>
+              )}
+            </>
+          )}
+
+          {(selected.type === 'checklist' || selected.type === 'table' || selected.type === 'writing' || selected.type === 'month' || selected.type === 'bookshelf' || selected.type === 'tiles') && (
             <div className="pe-field">
               <span>Heading colour</span>
               <Swatches colors={TAPE_LIST} value={selected.color} label="Heading colour" onPick={(c) => patchEl(selected.id, { color: c })} />
@@ -681,7 +742,7 @@ function PageEditor({ stored }: { stored: Page }) {
           {isWritable(selected) && <TextStyleFields el={selected as PartTextStyle} onPatch={(patch, tag) => patchEl(selected.id, patch, tag)} />}
 
           {isWritable(selected) && (
-            <p className="muted">Write straight on the part while it is selected. Move it by its heading or the ✥ handle. After Done, ticks still work with a tap.</p>
+            <p className="muted">Write straight on the part while it is selected. Move it by its heading or the ✥ handle. After Done, ticks{selected.type === 'tiles' ? ' and tile marks' : ''} still work with a tap.</p>
           )}
 
           {selected.type === 'tracker' && <p className="muted">Shows this tracker live, in the look chosen for it. Tap it outside editing to log.</p>}
@@ -1027,6 +1088,26 @@ function PageEditor({ stored }: { stored: Page }) {
             <button className="btn danger" onClick={() => setSheet('delete')}>
               Delete this {page.isTemplate ? 'template' : 'page'}
             </button>
+          </div>
+        </Sheet>
+      )}
+
+      {sheet === 'grid' && (
+        <Sheet title="Add a tile grid" onClose={() => setSheet(null)}>
+          <p className="muted">Write on the tiles in Edit; tap a tile to mark it when you are done.</p>
+          <div className="menu-list">
+            {GRID_PRESETS.map((g) => (
+              <button
+                key={g.id}
+                className="btn"
+                onClick={() => {
+                  addEl(newGrid(pageRef.current, g.id));
+                  setSheet(null);
+                }}
+              >
+                {g.name}
+              </button>
+            ))}
           </div>
         </Sheet>
       )}

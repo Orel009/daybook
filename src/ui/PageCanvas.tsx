@@ -8,7 +8,7 @@ import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domai
 import { buildDayMap } from '../domain/stats';
 import { configFor, getVisualization } from '../visualizations';
 import { DrawnStickerArt } from '../stickers/drawn';
-import { BookshelfBody, BoxBody, ChecklistBody, MonthBody, TableBody, WritingBody, type PartChange } from './PageParts';
+import { BookshelfBody, BoxBody, ChecklistBody, MonthBody, TableBody, WritingBody, type PartChange, type PartMode } from './PageParts';
 import { QuickLog } from './QuickLog';
 
 /** Position, size and rotation of an element, in page units. */
@@ -114,10 +114,12 @@ function OwnTrackerBody({ trackerId, live, look, full }: { trackerId: string; li
 }
 
 /**
- * What an element looks like. `live` makes tracker widgets tappable (view mode);
- * `onChange` lets fillable parts save what is typed or ticked.
+ * What an element looks like. `live` (the finished page) makes tracker widgets
+ * tappable and lets parts save quick taps through `onChange`; `editing` (the
+ * part selected in Edit) makes written parts typeable in place.
  */
-export function ElementBody({ el, live, onChange }: { el: PageElement; live: boolean; onChange?: PartChange }) {
+export function ElementBody({ el, live, onChange, editing = false }: { el: PageElement; live: boolean; onChange?: PartChange; editing?: boolean }) {
+  const mode: PartMode = editing ? 'edit' : live && onChange ? 'view' : 'static';
   switch (el.type) {
     case 'text':
       return (
@@ -156,17 +158,17 @@ export function ElementBody({ el, live, onChange }: { el: PageElement; live: boo
     case 'tracker':
       return <TrackerBody trackerId={el.trackerId} live={live} look={el.look} full={el.full} />;
     case 'bookshelf':
-      return <BookshelfBody el={el} onChange={onChange} />;
+      return <BookshelfBody el={el} mode={mode} onChange={onChange} />;
     case 'box':
       return <BoxBody el={el} />;
     case 'checklist':
-      return <ChecklistBody el={el} onChange={onChange} />;
+      return <ChecklistBody el={el} mode={mode} onChange={onChange} />;
     case 'table':
-      return <TableBody el={el} onChange={onChange} />;
+      return <TableBody el={el} mode={mode} onChange={onChange} />;
     case 'writing':
-      return <WritingBody el={el} onChange={onChange} />;
+      return <WritingBody el={el} mode={mode} onChange={onChange} />;
     case 'month':
-      return <MonthBody el={el} onChange={onChange} />;
+      return <MonthBody el={el} mode={mode} onChange={onChange} />;
   }
 }
 

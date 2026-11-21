@@ -1116,3 +1116,43 @@ textarea { resize: vertical; line-height: 1.45; }
 .check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; }
 .check-row input { width: 22px; height: 22px; }
 .public-view { max-width: 1200px; margin: 0 auto; padding: 18px 16px 48px; }
+
+/* ---------- writing style of a part (font, size, colour, alignment) ----------
+   Set as variables on the part; unset variables fall back to "inherit" (or the
+   spine's own look), so pages without a style render exactly as before. The
+   selectors match the weight of the input reset above and come after it. */
+.pg-layer .pp-panel :is(.pp-item-text, .pp-cell, .pp-paper, .pp-note, .pp-tile-text):is(span, div, input, textarea) {
+  font-family: var(--pp-font, inherit);
+  font-weight: var(--pp-weight, inherit);
+  font-size: var(--pp-size, inherit);
+  color: var(--pp-color, inherit);
+  text-align: var(--pp-align, inherit);
+}
+.pg-layer .pp-panel .pp-spine:is(span, textarea) {
+  font-family: var(--pp-font, var(--font-display));
+  font-weight: var(--pp-weight, 600);
+  font-size: var(--pp-size, 21px);
+  color: var(--pp-color, inherit);
+  text-align: var(--pp-align, inherit);
+}
+.pg-layer .pp-checklist li.is-done .pp-item-text:is(span, input) { color: #6f6180; }
+
+/* ---------- writing in place while editing ---------- */
+.pg.is-edit .pg-el.is-typing { cursor: default; }
+.pg.is-edit .pg-el.is-typing .pg-el-body { pointer-events: auto; }
+.pg.is-edit .pg-el.is-typing :is(input, textarea) { cursor: text; user-select: text; -webkit-user-select: text; touch-action: auto; background: rgb(255 255 255 / 0.55); box-shadow: inset 0 0 0 calc(1.5px / var(--pg-scale)) rgb(58 43 71 / 0.22); }
+.pg.is-edit .pg-el.is-typing :is(.pp-head, .pp-box-title) { cursor: grab; }
+.handle-move { left: calc(var(--hs) / -2 - 5px / var(--pg-scale)); top: calc(var(--hs) / -2 - 5px / var(--pg-scale)); cursor: grab; display: grid; place-items: center; font-size: calc(18px / var(--pg-scale)); line-height: 1; color: #3a2b47; background: #bfd6a0; }
+
+/* ---------- text that doesn't fit its spot (see Fit in PageParts) ----------
+   The spots are given a size so overflow can be measured; text that fits is
+   drawn exactly as before. */
+.pp-day > .pp-note { flex: 1 1 0; min-height: 0; overflow: hidden; }
+.pp-td > span.pp-cell { display: block; height: 100%; overflow: hidden; }
+.pg-layer .pp-panel .fit-wrap:is(span) { font-size: calc(var(--pp-size, 1em) * 0.86); line-height: 1.12; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: normal; word-break: normal; white-space: normal; }
+.pg-layer .pp-panel .fit-cut:is(span) { font-size: calc(var(--pp-size, 1em) * 0.86); line-height: 1.12; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-layer .pp-panel .pp-tile-text.fit-wrap:is(span) { -webkit-box-pack: center; }
+.pg-layer .pp-panel .pp-spine.fit-wrap:is(span) { font-size: calc(var(--pp-size, 21px) * 0.86); display: block; -webkit-line-clamp: none; line-clamp: none; overflow-wrap: normal; }
+.pg-layer .pp-panel .pp-spine.fit-cut:is(span) { font-size: calc(var(--pp-size, 21px) * 0.86); display: block; }
+/* break between words only: a word that is too long is fitted (smaller, then "…"), never split */
+.pp-td > span:is(.pp-cell, .pp-note), span.pp-tile-text { overflow-wrap: normal; word-break: normal; }

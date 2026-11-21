@@ -10,6 +10,8 @@ import {
   newBookshelf,
   newBox,
   newChecklist,
+  isWritable,
+  type PartTextStyle,
   newCustomSticker,
   newDrawnSticker,
   newItem,
@@ -121,6 +123,73 @@ const TAPE_LIST = Object.entries(TAPE_COLORS);
 const TEXT_LIST: [string, string][] = TEXT_COLORS.map((c) => [c, c]);
 const BG_LIST: [string, string][] = BG_COLORS.map((c) => [c, c]);
 
+/** Lettering, size, colour and alignment for everything written in a part. */
+function TextStyleFields({ el, onPatch }: { el: PartTextStyle; onPatch: (patch: Patch, tag?: string) => void }) {
+  const custom = el.font || el.textSize || el.textColor || el.textAlign;
+  return (
+    <div className="pe-field pe-textstyle">
+      <span>Writing style</span>
+      <div className="font-picker" role="radiogroup" aria-label="Lettering for the writing">
+        <button role="radio" aria-checked={!el.font} className={!el.font ? 'is-on' : ''} onClick={() => onPatch({ font: undefined })}>
+          Standard
+        </button>
+        {TEXT_FONTS.map((f) => (
+          <button key={f.id} role="radio" aria-checked={el.font === f.id} className={el.font === f.id ? 'is-on' : ''} style={{ fontFamily: f.family, fontWeight: f.weight }} onClick={() => onPatch({ font: f.id })}>
+            {f.name}
+          </button>
+        ))}
+      </div>
+      <label className="pe-slider">
+        <span>Size{el.textSize ? `: ${el.textSize}` : ' (standard)'}</span>
+        <input type="range" min={12} max={64} value={el.textSize ?? 22} onChange={(e) => onPatch({ textSize: Number(e.target.value) }, 'text-size')} aria-label="Writing size" />
+      </label>
+      <Swatches colors={TEXT_LIST} value={el.textColor} label="Writing colour" allowNone onPick={(c) => onPatch({ textColor: c })} />
+      <div className="seg seg-small" role="radiogroup" aria-label="Writing alignment">
+        {(['left', 'center', 'right'] as const).map((a) => (
+          <button key={a} role="radio" aria-checked={el.textAlign === a} className={el.textAlign === a ? 'is-on' : ''} onClick={() => onPatch({ textAlign: el.textAlign === a ? undefined : a })}>
+            {a[0].toUpperCase() + a.slice(1)}
+          </button>
+        ))}
+      </div>
+      {custom && (
+        <button className="btn btn-quiet btn-small" onClick={() => onPatch({ font: undefined, textSize: undefined, textColor: undefined, textAlign: undefined })}>
+          Back to the standard look
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The nearest ancestor that scrolls (or the page itself). */
+function scrollerOf(el: HTMLElement): HTMLElement {
+  for (let n = el.parentElement; n; n = n.parentElement) {
+    const y = getComputedStyle(n).overflowY;
+    if ((y === 'auto' || y === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+  }
+  return (document.scrollingElement as HTMLElement) ?? document.documentElement;
+}
+
+/**
+ * On narrow screens the options panel sits over the bottom of the screen.
+ * Scrolls so `part` is fully visible above it (or, if it is taller than the
+ * space, its top, or the field being typed in).
+ */
+function revealAbove(panel: HTMLElement | null, part: HTMLElement, field?: HTMLElement) {
+  if (!panel || getComputedStyle(panel).position !== 'fixed') return;
+  const limit = panel.getBoundingClientRect().top - 14;
+  const top = 14;
+  const room = limit - top;
+  const r = part.getBoundingClientRect();
+  let target = r;
+  if (r.height > room) target = field ? field.getBoundingClientRect() : new DOMRect(r.left, r.top, r.width, Math.min(r.height, room));
+  let delta = 0;
+  if (target.bottom > limit) delta = target.bottom - limit;
+  if (target.top - delta < top) delta = target.top - top;
+  if (Math.abs(delta) < 2) return;
+  const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  scrollerOf(part).scrollBy({ top: delta, behavior: smooth ? 'smooth' : 'auto' });
+}
+
 function PageEditor({ stored }: { stored: Page }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -131,6 +200,9 @@ function PageEditor({ stored }: { stored: Page }) {
   const pageRef = useRef(page);
   const [editing, setEditing] = useState(params.get('edit') === '1');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const propsRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [panelPad, setPanelPad] = useState(0);
   const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete'>(null);
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState('');
@@ -258,6 +330,8 @@ function PageEditor({ stored }: { stored: Page }) {
   };
 
   const onKey = (e: React.KeyboardEvent, el: PageElement) => {
+    // keys typed into a part's own fields are writing, not moving or removing
+    if ((e.target as HTMLElement).closest('input, textarea')) return;
     const step = e.shiftKey ? 50 : 10;
     const moves: Record<string, Patch> = {
       ArrowLeft: { x: el.x - step },
@@ -278,6 +352,34 @@ function PageEditor({ stored }: { stored: Page }) {
   useEffect(() => {
     if (!editing) setSelectedId(null);
   }, [editing]);
+
+  // Narrow screens: room under the page for the options panel, so the last parts can be reached.
+  useEffect(() => {
+    const panel = propsRef.current;
+    if (!editing || !panel) return setPanelPad(0);
+    const measure = () => {
+      const fixed = getComputedStyle(panel).position === 'fixed';
+      setPanelPad(fixed ? Math.ceil(window.innerHeight - panel.getBoundingClientRect().top + 24) : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(panel);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [editing, selectedId]);
+
+  // A part just selected: scroll it fully into view above the panel.
+  useEffect(() => {
+    if (!editing || !selectedId) return;
+    const id = requestAnimationFrame(() => {
+      const part = canvasRef.current?.querySelector<HTMLElement>('.pg-el.is-selected');
+      if (part) revealAbove(propsRef.current, part);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editing, selectedId, panelPad]);
 
   const pickPhoto = async (file: File | undefined, target: 'element' | 'background') => {
     if (!file) return;
@@ -361,7 +463,7 @@ function PageEditor({ stored }: { stored: Page }) {
   );
 
   const props = editing && (
-    <div className="pe-props" aria-live="polite">
+    <div className="pe-props" aria-live="polite" ref={propsRef}>
       {!selected ? (
         <p className="muted">Tap something on the page to move, resize or change it. Drag the round handle to turn it, the corner to resize.</p>
       ) : (
@@ -576,8 +678,10 @@ function PageEditor({ stored }: { stored: Page }) {
             </div>
           )}
 
-          {(selected.type === 'checklist' || selected.type === 'table' || selected.type === 'writing' || selected.type === 'month' || selected.type === 'bookshelf') && (
-            <p className="muted">Tap Done, then type or tick straight on the page.</p>
+          {isWritable(selected) && <TextStyleFields el={selected as PartTextStyle} onPatch={(patch, tag) => patchEl(selected.id, patch, tag)} />}
+
+          {isWritable(selected) && (
+            <p className="muted">Write straight on the part while it is selected. Move it by its heading or the ✥ handle. After Done, ticks still work with a tap.</p>
           )}
 
           {selected.type === 'tracker' && <p className="muted">Shows this tracker live, in the look chosen for it. Tap it outside editing to log.</p>}
@@ -631,28 +735,52 @@ function PageEditor({ stored }: { stored: Page }) {
       <div className="pe-body">
         {tools}
         {props}
-        <div className="pe-canvas" ref={column}>
+        <div
+          className="pe-canvas"
+          ref={(node) => {
+            column.current = node;
+            canvasRef.current = node;
+          }}
+          style={panelPad ? { paddingBottom: panelPad } : undefined}
+          onFocusCapture={(e) => {
+            // typing in a part: keep the field (and its part) above the panel once the keyboard is up
+            const field = e.target as HTMLElement;
+            if (!editing || !field.matches('input, textarea')) return;
+            const part = field.closest<HTMLElement>('.pg-el');
+            if (part) window.setTimeout(() => revealAbove(propsRef.current, part, field), 320);
+          }}
+        >
           {editing ? (
             <PageSurface page={page} width={width} className="is-edit" onPointerDown={(e) => e.target === e.currentTarget && setSelectedId(null)}>
               {page.elements.map((el) => {
                 const on = el.id === selectedId;
+                const typing = on && isWritable(el);
                 return (
                   <div
                     key={el.id}
-                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''}`}
+                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''} ${typing ? 'is-typing' : ''}`}
                     style={frameStyle(el)}
                     tabIndex={0}
                     role="button"
                     aria-label={`${TYPE_NAMES[el.type]}${el.type === 'text' ? `: ${el.text.slice(0, 40)}` : ''}${on ? ', selected' : ''}`}
-                    onPointerDown={(e) => begin(e, el, 'move')}
-                    onFocus={() => setSelectedId(el.id)}
+                    onPointerDown={(e) => {
+                      // in the selected part, pressing a field or button types or taps; elsewhere it drags
+                      if (typing && (e.target as HTMLElement).closest('input, textarea, button')) return e.stopPropagation();
+                      begin(e, el, 'move');
+                    }}
+                    onFocus={(e) => e.target === e.currentTarget && setSelectedId(el.id)}
                     onKeyDown={(e) => onKey(e, el)}
                   >
                     <div className="pg-el-body">
-                      <ElementBody el={el} live={false} />
+                      <ElementBody el={el} live={false} editing={typing} onChange={typing ? (patch) => patchEl(el.id, patch, `fill-${el.id}`) : undefined} />
                     </div>
                     {on && (
                       <>
+                        {typing && (
+                          <span className="handle handle-move" onPointerDown={(e) => begin(e, el, 'move')} aria-hidden="true">
+                            ✥
+                          </span>
+                        )}
                         <span className="handle-stem" aria-hidden="true" />
                         <span className="handle handle-rotate" onPointerDown={(e) => begin(e, el, 'rotate')} aria-hidden="true" />
                         <span className="handle handle-resize" onPointerDown={(e) => begin(e, el, 'resize')} aria-hidden="true" />

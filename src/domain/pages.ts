@@ -129,7 +129,19 @@ export interface TrackerElement extends ElementBase {
   full?: boolean;
 }
 
-// ----- parts that are filled in while viewing a page (no edit mode needed)
+// ----- parts that are written in while editing, and ticked while viewing
+
+/**
+ * How the writing inside a part looks (not its heading). Every field is
+ * optional: left out, the part looks exactly as it always has, so older and
+ * shared pages render unchanged.
+ */
+export interface PartTextStyle {
+  font?: TextFont;
+  textSize?: number; // page units
+  textColor?: string; // hex
+  textAlign?: 'left' | 'center' | 'right';
+}
 
 /** A frame or coloured panel for grouping things, with an optional heading. */
 export interface BoxElement extends ElementBase {
@@ -145,14 +157,14 @@ export interface ChecklistItem {
   done: boolean;
 }
 
-export interface ChecklistElement extends ElementBase {
+export interface ChecklistElement extends ElementBase, PartTextStyle {
   type: 'checklist';
   title: string;
   color: string; // heading colour, key of TAPE_COLORS
   items: ChecklistItem[];
 }
 
-export interface TableElement extends ElementBase {
+export interface TableElement extends ElementBase, PartTextStyle {
   type: 'table';
   title: string;
   color: string;
@@ -161,7 +173,7 @@ export interface TableElement extends ElementBase {
   cells: Record<string, string>; // "row:col" -> text
 }
 
-export interface WritingElement extends ElementBase {
+export interface WritingElement extends ElementBase, PartTextStyle {
   type: 'writing';
   title: string;
   color: string;
@@ -169,7 +181,7 @@ export interface WritingElement extends ElementBase {
   lined: boolean;
 }
 
-export interface MonthElement extends ElementBase {
+export interface MonthElement extends ElementBase, PartTextStyle {
   type: 'month';
   color: string;
   year: number;
@@ -185,7 +197,7 @@ export interface ShelfBook {
 }
 
 /** Rows of blank book spines to write titles on. */
-export interface BookshelfElement extends ElementBase {
+export interface BookshelfElement extends ElementBase, PartTextStyle {
   type: 'bookshelf';
   title: string;
   color: string;
@@ -206,9 +218,13 @@ export type PageElement =
   | WritingElement
   | MonthElement;
 
-/** Parts that respond to taps and typing when the page is being viewed. */
+/** Parts that respond to taps when the page is being viewed. */
 export const isFillable = (el: PageElement): boolean =>
-  el.type === 'tracker' || el.type === 'checklist' || el.type === 'table' || el.type === 'writing' || el.type === 'month' || el.type === 'bookshelf';
+  el.type === 'tracker' || isWritable(el);
+
+/** Parts that are written in (in Edit, while selected). */
+export const isWritable = (el: PageElement): boolean =>
+  el.type === 'checklist' || el.type === 'table' || el.type === 'writing' || el.type === 'month' || el.type === 'bookshelf';
 
 export interface Page {
   id: string;

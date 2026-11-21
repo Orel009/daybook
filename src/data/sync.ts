@@ -20,6 +20,7 @@ import {
   type SyncKind,
 } from './merge';
 import { SETTINGS_ID, usedAssets, useStore } from './store';
+import { clearShared, loadSharedFromDevice, syncShared } from './sharing';
 
 // Background sync between this device and the cloud copy.
 //
@@ -220,6 +221,7 @@ async function round(): Promise<void> {
   if (meta?.userId !== session.user.id) {
     meta = { key: 'sync', userId: session.user.id, email: session.user.email, recordsCursor: null, assetsCursor: null, lastSyncedAt: null };
     await markEverything();
+    await clearShared(); // what was shared with another account stays with it
     await saveMeta(meta);
   }
   useSync.setState({ status: 'signed-in', email: meta.email, syncing: true, lastSyncedAt: meta.lastSyncedAt });
@@ -238,6 +240,9 @@ async function round(): Promise<void> {
     await saveMeta(meta);
     failures = 0;
     useSync.setState({ lastSyncedAt: meta.lastSyncedAt, problem: null });
+    // What others share with this account: a separate layer, after the book's
+    // own sync, so a problem there never holds up or fails the book itself.
+    await syncShared(client).catch((err) => console.warn('Shared items did not sync; will try again next time', err));
   } catch (err) {
     console.warn('Sync did not finish; will try again', err);
     useSync.setState({ problem: navigator.onLine ? 'failed' : 'offline' });
@@ -297,6 +302,7 @@ export function startSync(): void {
   window.addEventListener('online', whenSignedIn(0));
   window.addEventListener('focus', whenSignedIn(0));
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && whenSignedIn(0)());
+  void loadSharedFromDevice();
   void loadMeta().then((meta) => {
     if (meta) useSync.setState({ email: meta.email, lastSyncedAt: meta.lastSyncedAt });
     // Neon is only contacted when this device has logged in before, or is coming back from Google.
@@ -321,6 +327,7 @@ export async function logOut(clear: boolean): Promise<string | null> {
   if (error) return error;
   clearTimeout(timer);
   await db.remove('meta', 'sync');
+  await clearShared();
   if (clear) await useStore.getState().clearLocal();
   useSync.setState({ status: 'signed-out', email: null, lastSyncedAt: null, problem: null });
   return null;

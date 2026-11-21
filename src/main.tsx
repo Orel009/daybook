@@ -14,9 +14,20 @@ import '@fontsource/special-elite/latin-400.css';
 import '@fontsource/press-start-2p/latin-400.css';
 import './styles.css';
 import { App } from './App';
+import { PublicView } from './screens/PublicView';
+
+// A public link (#/s/<token>) opens on its own: the book on this device is not
+// loaded, nothing is saved and nothing syncs.
+const linkToken = (hash: string) => /^#\/s\/([^/?#]+)/.exec(hash)?.[1];
+const publicToken = linkToken(location.hash);
+// Moving between the app and a link, or from one link to another, in the same
+// tab starts the page afresh.
+window.addEventListener('hashchange', () => {
+  if (linkToken(location.hash) !== publicToken) location.reload();
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {publicToken ? <PublicView token={publicToken} /> : <App />}
   </StrictMode>,
 );

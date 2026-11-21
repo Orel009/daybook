@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../data/store';
 import type { Page } from '../domain/pages';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
+import { SharedBooksList } from './Shared';
 
 // The book: every journal page bound in order between two covers.
 //   - wide screens show a two-page spread, narrow ones a single page
@@ -43,11 +44,60 @@ function SideView({ side, width, owner, count }: { side: Side | undefined; width
   );
 }
 
+/** This book, with reordering and a way into each page. */
 export function Book() {
   const allPages = useStore((s) => s.pages);
   const owner = useStore((s) => s.settings.ownerName);
   const movePage = useStore((s) => s.movePage);
   const pages = useMemo(() => allPages.filter((p) => !p.isTemplate).sort((a, b) => a.sortOrder - b.sortOrder), [allPages]);
+  return (
+    <BookView
+      pages={pages}
+      owner={owner}
+      header={<PageHeader title="Book" sub="Swipe, tap the arrows or use the arrow keys to turn the page" />}
+      empty={
+        <>
+          <PageHeader title="Book" />
+          <EmptyState emoji="📖" title="Your book is waiting for its first page">
+            <p>Every page you make in the journal is bound in here, in order, ready to flip through.</p>
+            <Link className="btn btn-primary" to="/journal">
+              Go to the journal
+            </Link>
+          </EmptyState>
+        </>
+      }
+      pageActions={(page, n, total) => (
+        <>
+          <button className="btn btn-small" onClick={() => movePage(page.id, -1)} disabled={n === 1} aria-label={`Move ${page.title || 'this page'} earlier in the book`}>
+            Earlier
+          </button>
+          <button className="btn btn-small" onClick={() => movePage(page.id, 1)} disabled={n === total} aria-label={`Move ${page.title || 'this page'} later in the book`}>
+            Later
+          </button>
+          <Link className="btn btn-small btn-primary" to={`/journal/${page.id}`}>
+            Open
+          </Link>
+        </>
+      )}
+      after={<SharedBooksList />}
+    />
+  );
+}
+
+interface BookViewProps {
+  /** Journal pages in book order. */
+  pages: Page[];
+  /** Name on the cover. */
+  owner: string;
+  header: ReactNode;
+  empty: ReactNode;
+  /** Buttons under the pages in view (own book only). */
+  pageActions?: (page: Page, number: number, total: number) => ReactNode;
+  after?: ReactNode;
+}
+
+/** Any book: this one, one shared with this account, or one opened from a public link. */
+export function BookView({ pages, owner, header, empty, pageActions, after }: BookViewProps) {
 
   // cover, pages, a blank if needed so the back cover closes on the left, back cover
   const sides = useMemo<Side[]>(() => {
@@ -124,13 +174,8 @@ export function Book() {
   if (pages.length === 0) {
     return (
       <>
-        <PageHeader title="Book" />
-        <EmptyState emoji="📖" title="Your book is waiting for its first page">
-          <p>Every page you make in the journal is bound in here, in order, ready to flip through.</p>
-          <Link className="btn btn-primary" to="/journal">
-            Go to the journal
-          </Link>
-        </EmptyState>
+        {empty}
+        {after}
       </>
     );
   }
@@ -167,7 +212,7 @@ export function Book() {
 
   return (
     <>
-      <PageHeader title="Book" sub="Swipe, tap the arrows or use the arrow keys to turn the page" />
+      {header}
 
       <div className="bk-area" ref={area}>
         <div
@@ -211,22 +256,13 @@ export function Book() {
                   <strong>{s.page.title || 'Untitled page'}</strong>
                   <small className="muted">Page {n}</small>
                 </span>
-                <span className="bk-page-actions">
-                  <button className="btn btn-small" onClick={() => movePage(s.page.id, -1)} disabled={n === 1} aria-label={`Move ${s.page.title || 'this page'} earlier in the book`}>
-                    Earlier
-                  </button>
-                  <button className="btn btn-small" onClick={() => movePage(s.page.id, 1)} disabled={n === pages.length} aria-label={`Move ${s.page.title || 'this page'} later in the book`}>
-                    Later
-                  </button>
-                  <Link className="btn btn-small btn-primary" to={`/journal/${s.page.id}`}>
-                    Open
-                  </Link>
-                </span>
+                {pageActions && <span className="bk-page-actions">{pageActions(s.page, n, pages.length)}</span>}
               </li>
             );
           })}
         </ul>
       )}
+      {after}
     </>
   );
 }

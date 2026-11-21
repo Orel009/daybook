@@ -1,10 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { createContext, useContext, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useAssetUrl } from '../data/assets';
+import { useAssetUrl, type PhotoSource } from '../data/assets';
 import { useDayMap, useToday } from '../data/hooks';
 import { useStore, useUi } from '../data/store';
 import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type Page, type PageElement } from '../domain/pages';
-import { TAPE_COLORS } from '../domain/types';
+import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
+import { buildDayMap } from '../domain/stats';
 import { configFor, getVisualization } from '../visualizations';
 import { DrawnStickerArt } from '../stickers/drawn';
 import { BookshelfBody, BoxBody, ChecklistBody, MonthBody, TableBody, WritingBody, type PartChange } from './PageParts';
@@ -21,8 +22,21 @@ export function frameStyle(el: PageElement): CSSProperties {
   };
 }
 
+/**
+ * A page that isn't one of this book's own (shared with this account, or opened
+ * from a public link): where its photos and tracker data come from. Pages
+ * drawn inside a source are read-only.
+ */
+export interface PageSource {
+  photos: PhotoSource;
+  tracker: (id: string) => TrackerDefinition | undefined;
+  entries: TrackerEntry[];
+}
+export const PageSourceContext = createContext<PageSource | null>(null);
+const usePagePhoto = (id: string | undefined) => useAssetUrl(id, useContext(PageSourceContext)?.photos);
+
 function PhotoBody({ el }: { el: Extract<PageElement, { type: 'photo' }> }) {
-  const url = useAssetUrl(el.assetId);
+  const url = usePagePhoto(el.assetId);
   return (
     <div className={`pg-photo frame-${el.frame} ${el.shadow ? 'has-shadow' : ''}`}>
       {url ? <img src={url} alt="" draggable={false} /> : <span className="pg-photo-wait" />}
@@ -31,11 +45,38 @@ function PhotoBody({ el }: { el: Extract<PageElement, { type: 'photo' }> }) {
 }
 
 export function CustomStickerBody({ assetId }: { assetId: string }) {
-  const url = useAssetUrl(assetId);
+  const url = usePagePhoto(assetId);
   return <div className="pg-sticker">{url && <img className="pg-sticker-img" src={url} alt="" draggable={false} />}</div>;
 }
 
-function TrackerBody({ trackerId, live, look, full }: { trackerId: string; live: boolean; look?: string; full?: boolean }) {
+/** A tracker widget on a shared or public page: the owner's data, nothing tappable. */
+function SourceTrackerBody({ source, trackerId, look, full }: { source: PageSource; trackerId: string; look?: string; full?: boolean }) {
+  const weekStartsOn = useStore((s) => s.settings.weekStartsOn);
+  const today = useToday();
+  const tracker = source.tracker(trackerId);
+  const days = useMemo(() => (tracker ? buildDayMap(tracker, source.entries) : new Map()), [tracker, source.entries]);
+  if (!tracker || tracker.archived) return <div className="pg-tracker card is-missing">This tracker isn't shared.</div>;
+  const viz = getVisualization(look ?? tracker.visualizationId);
+  return (
+    <div className={`pg-tracker card ${full ? 'is-full' : ''}`} style={{ ['--tracker' as string]: TAPE_COLORS[tracker.color] }}>
+      <div className="card-head">
+        <h2>
+          <span>
+            <span aria-hidden="true">{tracker.emoji}</span> {tracker.name}
+          </span>
+        </h2>
+      </div>
+      <viz.Component tracker={tracker} days={days} today={today} weekStartsOn={weekStartsOn} config={configFor(tracker.visualizationConfig, viz.id)} compact={!full} />
+    </div>
+  );
+}
+
+function TrackerBody(props: { trackerId: string; live: boolean; look?: string; full?: boolean }) {
+  const source = useContext(PageSourceContext);
+  return source ? <SourceTrackerBody source={source} {...props} /> : <OwnTrackerBody {...props} />;
+}
+
+function OwnTrackerBody({ trackerId, live, look, full }: { trackerId: string; live: boolean; look?: string; full?: boolean }) {
   const tracker = useStore((s) => s.trackers.find((t) => t.id === trackerId && !t.archived));
   const weekStartsOn = useStore((s) => s.settings.weekStartsOn);
   const openLog = useUi((s) => s.openLog);
@@ -142,7 +183,7 @@ interface SurfaceProps {
 export function PageSurface({ page, width, children, className, onPointerDown }: SurfaceProps) {
   const { w, h } = PAGE_DIMS[page.size];
   const scale = width / w;
-  const bgUrl = useAssetUrl(page.background.assetId);
+  const bgUrl = usePagePhoto(page.background.assetId);
   const dark = isDarkColor(page.background.color);
   return (
     <div className={`pg ${className ?? ''}`} style={{ width, height: h * scale }}>

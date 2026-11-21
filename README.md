@@ -42,6 +42,23 @@ The tables, trigger and RLS policies are in `db/schema.sql`. Without the two var
 - **Photos** are re-encoded to at most 1200px WebP for the cloud. A photo deleted on one device but still used on another is uploaded again rather than lost.
 - **When.** After login, when the app opens, 2 seconds after a change, when it comes back into view and when the connection returns. Failures retry quietly.
 
+## Sharing (read-only)
+
+Logged-in users can share with other accounts, always read-only; there is no editing together.
+
+- **View only**: a page, a tracker (with its entries) or the whole book. It appears for the recipient under "Shared with me" in the Journal, Trackers and Book, stays up to date, and disappears from their device on the next sync after it is revoked. When a page shows tracker boxes, the share dialog offers to share those trackers too (each a separate, revocable share).
+- **Send a copy**: a page or template, photos included. Accepting adds it to the recipient's own book with new ids; there is no link back.
+- **Public link**: a page or the whole book, for anyone with the link, no account. 256-bit token, only its hash is stored, revocable, at most 200 views a day ("resting until tomorrow" after that). `#/s/<token>` opens outside the app: nothing is loaded from or saved to the device.
+
+All access is decided in Postgres (`db/sharing.sql`): RLS, grants, and a few narrow `SECURITY DEFINER` functions. The book's own tables and policies are unchanged, so its sync and merge are untouched; shared items live in separate IndexedDB stores (`shared`, `sharedAssets`). Shares are addressed by email and only reach verified addresses; the recipient sees the name the owner typed, never the owner's account.
+
+Local admin scripts (your machine only, through your `neon login`; nothing secret is printed or saved):
+
+```bash
+node scripts/users.mjs                        # every account, to spot strangers
+node scripts/invite.mjs friend@example.com "Name"   # account while sign-ups are closed
+```
+
 ## How it is put together
 
 ```
@@ -58,6 +75,8 @@ src/
     cloud.ts       Neon Auth + Data API client
     sync.ts        background push / pull
     merge.ts       sync rules: who wins, cursors, photos (tested)
+    sharing.ts     shared-with-me layer, shares, copies, links
+    shareRules.ts  sharing rules: rows, photos, link tokens (tested)
     defaults.ts    categories, presets, dashboard defaults
   visualizations/
     registry.ts    registerVisualization / getVisualization

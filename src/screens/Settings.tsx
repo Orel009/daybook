@@ -6,6 +6,7 @@ import { PageHeader } from '../ui/Layout';
 import { Sheet } from '../ui/Sheet';
 import { useSync } from '../data/sync';
 import { AccountSection } from './Account';
+import { SharingSection } from './Sharing';
 
 const THEMES: { id: ThemeId; name: string; hint: string }[] = [
   { id: 'scrapbook', name: 'Scrapbook', hint: 'Dotted paper, tape and soft colour' },
@@ -94,6 +95,7 @@ export function Settings() {
       </section>
 
       <AccountSection />
+      <SharingSection />
 
       <section className="card form-card">
         <h2>Backup</h2>

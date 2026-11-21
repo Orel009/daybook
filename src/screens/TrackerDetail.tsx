@@ -8,6 +8,7 @@ import { TAPE_COLORS } from '../domain/types';
 import { EmptyState } from '../ui/Layout';
 import { QuickLog } from '../ui/QuickLog';
 import { Sheet } from '../ui/Sheet';
+import { ShareSheet } from '../ui/ShareSheet';
 import { configFor, getVisualization } from '../visualizations';
 
 export function TrackerDetail() {
@@ -21,6 +22,7 @@ export function TrackerDetail() {
   const openLog = useUi((s) => s.openLog);
   const days = useDayMap(tracker);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [shown, setShown] = useState(20);
 
   const history = useMemo(
@@ -72,10 +74,14 @@ export function TrackerDetail() {
           </p>
         </div>
         <div className="page-head-action">
+          <button className="btn" onClick={() => setSharing(true)}>
+            Share
+          </button>
           <Link className="btn" to={`/trackers/${tracker.id}/edit`}>
             Edit
           </Link>
         </div>
+      {sharing && <ShareSheet target={{ scope: 'tracker', itemId: tracker.id, title: tracker.name }} onClose={() => setSharing(false)} />}
       </header>
 
       <div className="detail-grid">

@@ -1102,3 +1102,17 @@ textarea { resize: vertical; line-height: 1.45; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- sharing ---------- */
+
+.shared-badge { display: inline-block; margin: -6px 0 16px; padding: 4px 12px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--raised); font-size: 0.9rem; font-weight: 700; color: var(--ink-soft); }
+.shared-page { width: 100%; max-width: 1200px; }
+.copies-waiting .copy-offer { display: grid; gap: 8px; padding-top: 12px; border-top: 1.5px solid var(--line); }
+.copies-waiting .copy-offer:first-of-type { border-top: 0; padding-top: 0; }
+.share-list { display: grid; gap: 10px; margin-top: 18px; }
+.share-list h3 { margin: 0; }
+.share-list .row { gap: 10px; }
+.share-also { border: 0; padding: 0; margin: 0; }
+.check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; }
+.check-row input { width: 22px; height: 22px; }
+.public-view { max-width: 1200px; margin: 0 auto; padding: 18px 16px 48px; }

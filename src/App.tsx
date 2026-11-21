@@ -13,6 +13,7 @@ import { Journal, Templates } from './screens/Journal';
 import { PageScreen } from './screens/PageScreen';
 import { Book } from './screens/Book';
 import { Settings } from './screens/Settings';
+import { SharedBookScreen, SharedPageScreen, SharedTrackerScreen } from './screens/Shared';
 
 const THEME_COLORS = { scrapbook: '#E9E4F2', dark: '#1D1A24', minimal: '#F3F3F1' } as const;
 
@@ -52,6 +53,9 @@ export function App() {
           <Route path="book" element={<Book />} />
           <Route path="templates" element={<Templates />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="shared/:owner/page/:id" element={<SharedPageScreen />} />
+          <Route path="shared/:owner/tracker/:id" element={<SharedTrackerScreen />} />
+          <Route path="shared/:owner/book" element={<SharedBookScreen />} />
           <Route path="*" element={<EmptyState emoji="🧭" title="That page doesn't exist" />} />
         </Route>
       </Routes>

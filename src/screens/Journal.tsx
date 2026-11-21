@@ -9,6 +9,7 @@ import { Sheet } from '../ui/Sheet';
 import { useActiveTrackers } from '../data/hooks';
 import { draftFromPreset, PRESETS } from '../data/defaults';
 import { BUILT_IN_TEMPLATES, buildTemplatePage, TEMPLATE_SUBJECTS, type BuiltInTemplate } from '../templates/builtin';
+import { CopiesWaiting, SharedPagesSection } from './Shared';
 
 const THUMB = { portrait: 168, landscape: 224 };
 
@@ -138,6 +139,7 @@ export function Journal() {
           </button>
         }
       />
+      <CopiesWaiting />
       {pages.length === 0 ? (
         <EmptyState emoji="✂️" title="No pages yet">
           <p>Make a page and arrange it however you like: photos, stickers, tape, notes and your trackers.</p>
@@ -152,6 +154,7 @@ export function Journal() {
           ))}
         </div>
       )}
+      <SharedPagesSection />
       {creating && <NewPageSheet onClose={() => setCreating(false)} />}
     </>
   );

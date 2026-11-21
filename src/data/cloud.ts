@@ -21,6 +21,20 @@ export const getClient = (): Promise<CloudClient> => {
   return clientPromise;
 };
 
+/**
+ * For public links only: the same Data API, but without an account it uses
+ * Neon's anonymous token (role "anonymous"), which can call link_view() and
+ * link_assets() and nothing else. Kept in memory; nothing is stored.
+ */
+const makePublicClient = (neon: typeof import('@neon/neon-js')) =>
+  neon.createClient({ auth: { url: AUTH_URL!, allowAnonymous: true }, dataApi: { url: DATA_API_URL! } });
+let publicClientPromise: Promise<ReturnType<typeof makePublicClient>> | null = null;
+export const getPublicClient = () => {
+  if (!cloudConfigured) return Promise.reject(new Error('Cloud sync is not set up.'));
+  publicClientPromise ??= import('@neon/neon-js').then(makePublicClient);
+  return publicClientPromise;
+};
+
 export interface CloudUser {
   /** The id Row-Level Security sees (the token's `sub`). */
   id: string;

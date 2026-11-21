@@ -61,32 +61,62 @@ async function load(id: string): Promise<AssetRecord | undefined> {
   return record;
 }
 
+/**
+ * Where a page's photos come from when it isn't one of this book's own pages:
+ * a page someone shares with this account, or a public link. `ns` keeps their
+ * object URLs apart from the book's own photos.
+ */
+export interface PhotoSource {
+  ns: string;
+  load: (id: string) => Promise<Blob | undefined>;
+}
+
+const ownPhotos: PhotoSource = { ns: '', load: async (id) => (await load(id))?.blob };
+
 /** Object URL for a stored photo, or undefined while loading / if missing. */
-export function useAssetUrl(id: string | undefined): string | undefined {
-  const [url, setUrl] = useState<string | undefined>(() => (id ? urls.get(id) : undefined));
+export function useAssetUrl(id: string | undefined, source: PhotoSource = ownPhotos): string | undefined {
+  const key = id ? `${source.ns}:${id}` : '';
+  const [url, setUrl] = useState<string | undefined>(() => (key ? urls.get(key) : undefined));
   useEffect(() => {
     if (!id) return setUrl(undefined);
-    const ready = urls.get(id);
+    const ready = urls.get(key);
     if (ready) return setUrl(ready);
     let live = true;
     const show = () =>
-      load(id).then((record) => {
-        if (!record) return false;
-        const made = urls.get(id) ?? URL.createObjectURL(record.blob);
-        urls.set(id, made);
+      source.load(id).then((blob) => {
+        if (!blob) return false;
+        const made = urls.get(key) ?? URL.createObjectURL(blob);
+        urls.set(key, made);
         if (live) setUrl(made);
         return true;
       });
     // Not on this device yet (still syncing): show it as soon as it arrives.
-    const waiting = (arrived: string) => arrived === id && void show();
+    const waiting = (arrived: string) => arrived === key && void show();
     void show().then((found) => found || arrivals.add(waiting));
     return () => {
       live = false;
       arrivals.delete(waiting);
     };
-  }, [id]);
+  }, [key, id, source]);
   return url;
 }
+
+/** Tells pages waiting for a photo from another source that it has arrived. */
+export const photoArrived = (ns: string, id: string) => {
+  for (const fn of arrivals) fn(`${ns}:${id}`);
+};
+
+/** A received copy's photo, saved as this book's own (new id, synced like any photo). */
+export async function addReceivedPhoto(blob: Blob, w: number, h: number): Promise<string> {
+  const record: AssetRecord = { id: newId(), blob, w, h, createdAt: new Date().toISOString() };
+  memory.set(record.id, record);
+  await db.put('assets', record);
+  void markDirty('asset', record.id);
+  return record.id;
+}
+
+/** base64 from the Data API back to a picture. */
+export const blobFromBase64 = (mime: string, data: string) => fromDataUrl(`data:${mime};base64,${data}`);
 
 const toDataUrl = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -179,7 +209,7 @@ export async function storeCloudAsset(a: CloudAsset): Promise<void> {
   const record: AssetRecord = { id: a.id, w: a.w, h: a.h, blob: fromDataUrl(`data:${a.mime};base64,${a.data}`), createdAt: new Date().toISOString() };
   memory.set(record.id, record);
   await db.put('assets', record);
-  for (const fn of arrivals) fn(record.id);
+  photoArrived('', record.id);
 }
 
 /** Forgets every photo held in memory (after the local data is cleared). */

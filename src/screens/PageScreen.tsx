@@ -37,6 +37,8 @@ import { CustomStickerBody, ElementBody, frameStyle, PageSurface, StaticPage } f
 import { DRAWN_STICKERS, DrawnStickerArt, drawnSticker } from '../stickers/drawn';
 import { monthTitle } from '../ui/PageParts';
 import { Sheet } from '../ui/Sheet';
+import { ShareSheet } from '../ui/ShareSheet';
+import { pageTrackerIds } from '../data/shareRules';
 
 type Mode = 'move' | 'resize' | 'width' | 'rotate';
 type Patch = Record<string, unknown>;
@@ -130,6 +132,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const [editing, setEditing] = useState(params.get('edit') === '1');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete'>(null);
+  const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState('');
   const [stickerSet, setStickerSet] = useState(STICKER_SETS[0].id); // stays on the last set used
   const [managing, setManaging] = useState(false);
@@ -851,6 +854,15 @@ function PageEditor({ stored }: { stored: Page }) {
       {sheet === 'more' && (
         <Sheet title={page.title || 'Untitled page'} onClose={() => setSheet(null)}>
           <div className="menu-list">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setSheet(null);
+                setSharing(true);
+              }}
+            >
+              Share…
+            </button>
             {page.isTemplate ? (
               <button
                 className="btn"
@@ -889,6 +901,13 @@ function PageEditor({ stored }: { stored: Page }) {
             </button>
           </div>
         </Sheet>
+      )}
+
+      {sharing && (
+        <ShareSheet
+          target={{ scope: 'page', itemId: page.id, title: page.title || 'this page', isTemplate: page.isTemplate, trackerIds: pageTrackerIds(page) }}
+          onClose={() => setSharing(false)}
+        />
       )}
 
       {sheet === 'delete' && (

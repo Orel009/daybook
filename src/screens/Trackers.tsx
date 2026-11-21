@@ -7,6 +7,7 @@ import { formatDay, scheduleLabel, streakLabel, streaks } from '../domain/stats'
 import { TAPE_COLORS } from '../domain/types';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { QuickLog } from '../ui/QuickLog';
+import { SharedTrackersSection } from './Shared';
 
 export function Trackers() {
   const all = useStore((s) => s.trackers);
@@ -112,6 +113,8 @@ export function Trackers() {
           )}
         </section>
       )}
+
+      <SharedTrackersSection />
     </>
   );
 }

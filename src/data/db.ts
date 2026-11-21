@@ -6,10 +6,12 @@
 // `deletedAt` fields every record carries, and the `outbox` store, which lists
 // what changed here and hasn't reached the cloud yet.
 
-export type StoreName = 'trackers' | 'entries' | 'categories' | 'meta' | 'pages' | 'assets' | 'outbox';
+// `shared` and `sharedAssets` hold what other accounts share with this one,
+// kept apart from the book itself (see sharing.ts).
+export type StoreName = 'trackers' | 'entries' | 'categories' | 'meta' | 'pages' | 'assets' | 'outbox' | 'shared' | 'sharedAssets';
 
 const DB_NAME = 'daybook';
-const DB_VERSION = 3; // v2 adds scrapbook pages and their photos, v3 the sync outbox
+const DB_VERSION = 4; // v2 adds scrapbook pages and their photos, v3 the sync outbox, v4 shared items
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 let persistent = false;
@@ -32,6 +34,8 @@ function open(): Promise<IDBDatabase | null> {
         if (!db.objectStoreNames.contains('pages')) db.createObjectStore('pages', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('shared')) db.createObjectStore('shared', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('sharedAssets')) db.createObjectStore('sharedAssets', { keyPath: 'key' });
       };
       req.onsuccess = () => {
         persistent = true;

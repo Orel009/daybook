@@ -41,6 +41,12 @@ export interface TrackerPreset {
   schedule: Schedule;
 }
 
+// Temperature blanket: the day's high in one of ten bands, coldest to warmest.
+const TEMPERATURE_C = ['Below −5°', '−5 to 0°', '1 to 5°', '6 to 10°', '11 to 15°', '16 to 20°', '21 to 25°', '26 to 30°', '31 to 35°', 'Above 35°'];
+const TEMPERATURE_F = ['Below 23°', '23 to 32°', '33 to 41°', '42 to 50°', '51 to 59°', '60 to 68°', '69 to 77°', '78 to 86°', '87 to 95°', 'Above 95°'];
+const BLANKET = ['blue', 'sky', 'teal', 'mint', 'green', 'lime', 'butter', 'orange', 'coral', 'red'];
+const blanketColors = (bands: string[]) => Object.fromEntries(bands.map((b, i) => [b, BLANKET[i]]));
+
 export const PRESETS: TrackerPreset[] = [
   { name: 'Workout', emoji: '🏃', color: 'coral', categoryId: 'health', valueType: 'boolean', schedule: { kind: 'weekdays', days: [1, 3, 5] } },
   { name: 'Water', emoji: '💧', color: 'sky', categoryId: 'health', valueType: 'number', unit: 'glasses', step: 1, target: 8, schedule: { kind: 'daily' } },
@@ -64,6 +70,24 @@ export const PRESETS: TrackerPreset[] = [
   { name: 'Stretching', emoji: '🤸', color: 'mint', categoryId: 'health', valueType: 'boolean', schedule: { kind: 'daily' } },
   { name: 'Strength training', emoji: '🏋️', color: 'coral', categoryId: 'health', valueType: 'boolean', schedule: { kind: 'weekdays', days: [2, 4, 6] } },
   { name: 'Walking', emoji: '🚶', color: 'sage', categoryId: 'health', valueType: 'number', unit: 'steps', step: 1000, target: 8000, schedule: { kind: 'daily' } },
+  // weather and temperature: one answer a day, drawn as a year in pixels
+  {
+    name: 'Weather', emoji: '⛅', color: 'sky', categoryId: 'lifestyle', valueType: 'choice',
+    choices: ['Sunny', 'Partly cloudy', 'Cloudy', 'Rain', 'Storm', 'Snow', 'Windy', 'Hot'],
+    valueColors: { Sunny: 'butter', 'Partly cloudy': 'sky', Cloudy: 'grey', Rain: 'blue', Storm: 'plum', Snow: 'lilac', Windy: 'teal', Hot: 'orange' },
+    visualizationId: 'pixels', schedule: { kind: 'daily' },
+  },
+  {
+    name: 'Temperature (°C)', emoji: '🌡️', color: 'coral', categoryId: 'lifestyle', valueType: 'choice',
+    choices: TEMPERATURE_C, valueColors: blanketColors(TEMPERATURE_C), visualizationId: 'pixels', schedule: { kind: 'daily' },
+  },
+  {
+    name: 'Temperature (°F)', emoji: '🌡️', color: 'coral', categoryId: 'lifestyle', valueType: 'choice',
+    choices: TEMPERATURE_F, valueColors: blanketColors(TEMPERATURE_F), visualizationId: 'pixels', schedule: { kind: 'daily' },
+  },
+  { name: 'Dreams', emoji: '💭', color: 'lilac', categoryId: 'sleep', valueType: 'text', schedule: { kind: 'daily' } },
+  { name: 'Self-care', emoji: '🛁', color: 'rose', categoryId: 'mind', valueType: 'boolean', schedule: { kind: 'daily' } },
+  { name: 'Series watched', emoji: '📺', color: 'plum', categoryId: 'lifestyle', valueType: 'number', unit: 'episodes', step: 1, schedule: { kind: 'daily' } },
 ];
 
 export const EMOJI_CHOICES = [

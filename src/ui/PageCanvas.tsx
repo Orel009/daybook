@@ -4,6 +4,7 @@ import { addImage, useAssetUrl, type PhotoSource } from '../data/assets';
 import { useDayMap, useToday } from '../data/hooks';
 import { useStore, useUi } from '../data/store';
 import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type FrameElement, type Page, type PageElement } from '../domain/pages';
+import { isWordTape, tapeImage } from '../domain/tapes';
 import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
 import { buildDayMap } from '../domain/stats';
 import { configFor, getVisualization } from '../visualizations';
@@ -119,6 +120,19 @@ function FrameBody({ el, mode, onChange }: { el: FrameElement; mode: PartMode; o
   );
 }
 
+/** A strip of washi tape: a plain pattern from the stylesheet, or a themed tape drawn as a tile. */
+export function TapeStrip({ color, pattern, edge, sheer }: { color: string; pattern: string; edge?: string; sheer?: boolean }) {
+  const art = tapeImage(pattern, color);
+  // word tapes: a second, empty layer keeps the colour edge to edge while the words stay inside the ends
+  const words = art && isWordTape(pattern);
+  return (
+    <div
+      className={`pg-tape ${art ? `tape-art ${words ? 'tape-words' : ''}` : `tape-${pattern}`} edge-${edge ?? 'torn'} ${sheer ? 'is-sheer' : ''}`}
+      style={{ backgroundColor: TAPE_COLORS[color], backgroundImage: words ? `${art}, linear-gradient(transparent, transparent)` : art }}
+    />
+  );
+}
+
 export function CustomStickerBody({ assetId }: { assetId: string }) {
   const url = usePagePhoto(assetId);
   return <div className="pg-sticker">{url && <img className="pg-sticker-img" src={url} alt="" draggable={false} />}</div>;
@@ -229,7 +243,7 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
         </div>
       );
     case 'tape':
-      return <div className={`pg-tape tape-${el.pattern} edge-${el.edge ?? 'torn'} ${el.sheer ? 'is-sheer' : ''}`} style={{ backgroundColor: TAPE_COLORS[el.color] }} />;
+      return <TapeStrip color={el.color} pattern={el.pattern} edge={el.edge} sheer={el.sheer} />;
     case 'frame':
       return <FrameBody el={el} mode={mode} onChange={onChange} />;
     case 'tracker':

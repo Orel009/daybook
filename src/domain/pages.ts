@@ -1,4 +1,5 @@
 import { newId } from './types';
+import type { ThemedTape } from './tapes';
 
 // Scrapbook pages. A page is a fixed-size sheet measured in page units; the
 // screen scales the whole sheet to fit, so a layout looks the same on a phone
@@ -127,7 +128,9 @@ export const TAPE_PATTERNS = [
   { id: 'rainbow', name: 'Rainbow' },
   { id: 'plain', name: 'Plain' },
 ] as const;
-export type TapePattern = (typeof TAPE_PATTERNS)[number]['id'];
+export type BasicTape = (typeof TAPE_PATTERNS)[number]['id'];
+/** A plain pattern drawn by the stylesheet, or a themed tape from tapes.ts. */
+export type TapePattern = BasicTape | ThemedTape;
 
 export const TAPE_EDGES = [
   { id: 'torn', name: 'Torn' },
@@ -357,6 +360,11 @@ export const STICKER_SETS: { id: string; name: string; stickers: string[] }[] = 
   { id: 'food', name: 'Food', stickers: ['🍓', '🍋', '🍎', '🥑', '🥗', '🍕', '🍝', '🍣', '🥪', '🍳', '🥞', '🧀', '🍫', '🍿', '🍇', '🥕', '🍞', '🍜'] },
   { id: 'animals', name: 'Animals', stickers: ['🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐨', '🦁', '🐸', '🐢', '🐙', '🐳', '🦄', '🐴', '🐑', '🕊️', '🦜', '🐾'] },
   { id: 'party', name: 'Celebrations', stickers: ['🎉', '🎊', '🎈', '🎂', '🥂', '🎁', '🎆', '🎇', '💝', '💍', '🎓', '👶', '🏡', '🪩', '🎶', '🥳'] },
+  { id: 'fruit', name: 'Fruit', stickers: ['🍋', '🍓', '🍒', '🍎', '🍊', '🍑', '🍐', '🍇', '🍉', '🍍', '🥝', '🫐', '🍌', '🥭', '🥥', '🍈'] },
+  { id: 'ocean', name: 'Ocean', stickers: ['🌊', '🐚', '🐠', '🐟', '🐬', '🐳', '🐙', '🦀', '🦞', '🪸', '⚓', '⛵', '🏝️', '🐢', '🦭', '🪼'] },
+  { id: 'travel', name: 'Travel', stickers: ['✈️', '🧳', '🗺️', '📍', '🌍', '🚆', '🚗', '🚢', '🏨', '🎫', '📸', '🗼', '🗽', '🏰', '⛩️', '🏖️'] },
+  { id: 'pets', name: 'Pets', stickers: ['🐱', '🐶', '🐾', '🦴', '🐝', '🐰', '🐹', '🐦', '🐠', '🐢', '🧶', '🥎', '🏠', '❤️'] },
+  { id: 'music', name: 'Music', stickers: ['🎵', '🎶', '🎧', '🎤', '🎸', '🎹', '🥁', '🎻', '🎺', '📻', '💿', '🎼', '🎙️', '🪩'] },
   { id: 'hearts', name: 'Hearts', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💖', '💕', '💞', '💓', '💗', '💘', '💌'] },
   { id: 'everyday', name: 'Everyday', stickers: ['📚', '✏️', '🖍️', '📝', '📅', '⏰', '💡', '🎨', '🎵', '🎧', '📷', '💻', '🛒', '🧺', '🧹', '🚗', '🚲', '💤'] },
 ];

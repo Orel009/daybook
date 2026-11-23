@@ -44,12 +44,13 @@ import {
 } from '../domain/pages';
 import { newId, TAPE_COLORS } from '../domain/types';
 import { EmptyState } from '../ui/Layout';
-import { CustomStickerBody, ElementBody, frameStyle, PageSurface, StaticPage } from '../ui/PageCanvas';
+import { CustomStickerBody, ElementBody, frameStyle, PageSurface, StaticPage, TapeStrip } from '../ui/PageCanvas';
 import { DRAWN_STICKERS, DrawnStickerArt, drawnSticker } from '../stickers/drawn';
 import { monthTitle } from '../ui/PageParts';
 import { Sheet } from '../ui/Sheet';
 import { ShareSheet } from '../ui/ShareSheet';
 import { pageTrackerIds } from '../data/shareRules';
+import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
 
 type Mode = 'move' | 'resize' | 'width' | 'rotate';
 type Patch = Record<string, unknown>;
@@ -180,6 +181,8 @@ function scrollerOf(el: HTMLElement): HTMLElement {
   return (document.scrollingElement as HTMLElement) ?? document.documentElement;
 }
 
+const BASIC_TAPES = new Set<string>(TAPE_PATTERNS.map((t) => t.id));
+const themeOfTape = (pattern: string): TapeTheme => THEMED_TAPES.find((t) => t.id === pattern)?.theme ?? 'basics';
 
 /**
  * On narrow screens the options panel sits over the bottom of the screen.
@@ -221,6 +224,8 @@ function PageEditor({ stored }: { stored: Page }) {
   const frameTarget = useRef<string | null>(null);
   const [croppingId, setCroppingId] = useState<string | null>(null);
   const lastPress = useRef({ id: '', wasSelected: false, moved: false });
+  const [tapeTheme, setTapeTheme] = useState<TapeTheme | null>(null);
+  const [recent, setRecent] = useState(recentTapes);
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState('');
   const [stickerSet, setStickerSet] = useState(STICKER_SETS[0].id); // stays on the last set used
@@ -466,6 +471,7 @@ function PageEditor({ stored }: { stored: Page }) {
   // positioning a photo ends when something else is selected
   useEffect(() => {
     setCroppingId((id) => (id && id === selectedId ? id : null));
+    setTapeTheme(null);
   }, [selectedId]);
 
   // Narrow screens: room under the page for the options panel, so the last parts can be reached.
@@ -738,10 +744,48 @@ function PageEditor({ stored }: { stored: Page }) {
             <>
               <div className="pe-field">
                 <span>Pattern</span>
+                <div className="sticker-sets tape-themes" role="radiogroup" aria-label="Tape theme">
+                  {TAPE_THEMES.map((th) => {
+                    const on = (tapeTheme ?? themeOfTape(selected.pattern)) === th.id;
+                    return (
+                      <button key={th.id} role="radio" aria-checked={on} className={`chip ${on ? 'is-on' : ''}`} onClick={() => setTapeTheme(th.id)}>
+                        {th.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                {recent.length > 0 && (
+                  <>
+                    <small className="muted">Recently used</small>
+                    <div className="tape-picker is-recent" role="group" aria-label="Recently used tapes">
+                      {recent.map((id) => {
+                        const name = TAPE_PATTERNS.find((t) => t.id === id)?.name ?? THEMED_TAPES.find((t) => t.id === id)?.name;
+                        if (!name) return null;
+                        return (
+                          <button key={id} aria-label={name} title={name} aria-pressed={selected.pattern === id} className={selected.pattern === id ? 'is-on' : ''} onClick={() => patchEl(selected.id, { pattern: id, color: tapeColorFor(id, selected.color) })}>
+                            <TapeStrip color={tapeColorFor(id, selected.color)} pattern={id} edge={selected.edge} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 <div className="tape-picker" role="radiogroup" aria-label="Tape pattern">
-                  {TAPE_PATTERNS.map((t) => (
-                    <button key={t.id} role="radio" aria-checked={selected.pattern === t.id} aria-label={t.name} title={t.name} className={selected.pattern === t.id ? 'is-on' : ''} onClick={() => patchEl(selected.id, { pattern: t.id })}>
-                      <i className={`pg-tape tape-${t.id} edge-${selected.edge ?? 'torn'}`} style={{ backgroundColor: TAPE_COLORS[selected.color] }} />
+                  {((tapeTheme ?? themeOfTape(selected.pattern)) === 'basics' ? TAPE_PATTERNS : THEMED_TAPES.filter((t) => t.theme === (tapeTheme ?? themeOfTape(selected.pattern)))).map((t) => (
+                    <button
+                      key={t.id}
+                      role="radio"
+                      aria-checked={selected.pattern === t.id}
+                      aria-label={t.name}
+                      title={t.name}
+                      className={selected.pattern === t.id ? 'is-on' : ''}
+                      onClick={() => {
+                        // a themed tape comes in its own colour (kraft is brown, foil is gold); she can change it below
+                        patchEl(selected.id, { pattern: t.id, color: tapeColorFor(t.id, selected.color) });
+                        setRecent(rememberTape(t.id));
+                      }}
+                    >
+                      {BASIC_TAPES.has(t.id) ? <i className={`pg-tape tape-${t.id} edge-${selected.edge ?? 'torn'}`} style={{ backgroundColor: TAPE_COLORS[selected.color] }} /> : <TapeStrip color={tapeColorFor(t.id, selected.color)} pattern={t.id} edge={selected.edge} />}
                     </button>
                   ))}
                 </div>

@@ -1223,6 +1223,15 @@ button.pg-frame-add:active { background: rgb(58 43 71 / 0.06); }
 .pg-el.type-frame:has(.frame-stamp) { filter: drop-shadow(0 5px 8px rgb(40 25 55 / 0.25)); }
 .pg.is-edit .pg-el.is-cropping { cursor: move; outline-style: solid; }
 
+/* ---------- themed washi tapes (tiles from tapes.ts, scaled to the tape's height) ---------- */
+.pg-tape.tape-art { background-size: auto 100%; background-repeat: repeat-x; background-position: left center; }
+/* tapes with words: whole words only. The words start inside the cut of the tape's end and are
+   spaced out evenly, so a tape of any length begins and ends with a whole word. */
+.pg-tape.tape-words { box-sizing: border-box; padding: 0 6%; background-origin: content-box; background-clip: content-box, border-box; background-repeat: space no-repeat; }
+.tape-themes { margin: 0; padding: 2px 2px 6px; }
+.tape-themes .chip { min-height: 40px; padding: 0 13px; font-size: 0.86rem; }
+.tape-picker.is-recent { margin-bottom: 6px; padding-bottom: 8px; border-bottom: 1.5px dashed var(--line); }
+
 /* ---------- challenges in other shapes: shaped tiles, a path, pictures ---------- */
 .pp-tilegrid:not(.is-shaped).mark-fill .pp-tile.is-done { background: var(--pp-mark); }
 .pp-tilegrid.is-shaped .pp-tiles { padding: 10px; }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { blobFromBase64, type PhotoSource } from '../data/assets';
 import { getPublicClient } from '../data/cloud';
 import { isLinkToken } from '../data/shareRules';
-import type { Page } from '../domain/pages';
+import { bookOrder, coverOf, type Page } from '../domain/pages';
 import type { TrackerDefinition, TrackerEntry } from '../domain/types';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import type { PageSource } from '../ui/PageCanvas';
@@ -84,11 +84,12 @@ export function PublicView({ token }: { token: string }) {
     const of = <T,>(kind: string) => result.records.filter((r) => r.kind === kind).map((r) => r.data as unknown as T);
     const trackers = of<TrackerDefinition>('tracker');
     const entries = of<TrackerEntry>('entry');
-    const pages = of<Page>('page')
-      .filter((p) => !p.isTemplate)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    // a link shows the pages; the book's own covers are not part of it
+    const everyPage = of<Page>('page');
+    const pages = result.scope === 'page' ? everyPage.filter((p) => !p.isTemplate) : bookOrder(everyPage);
     const source: PageSource = { photos: linkPhotos(token), tracker: (id) => trackers.find((t) => t.id === id), entries };
-    return { pages, source };
+    // a book link shows the book with the covers its owner designed
+    return { pages, source, cover: coverOf(everyPage, 'cover'), back: coverOf(everyPage, 'back') };
   }, [result, token]);
 
   return (
@@ -121,6 +122,8 @@ export function PublicView({ token }: { token: string }) {
               <BookView
                 pages={content.pages}
                 owner={result.owner_name}
+                cover={content.cover}
+                back={content.back}
                 header={<PageHeader title={`${result.owner_name}’s book`} sub="Shared with a link · view only" />}
                 empty={<EmptyState emoji="📖" title="This book has no pages yet" />}
               />

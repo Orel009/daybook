@@ -106,7 +106,7 @@ function Head({ title, color, extra }: { title: string; color: string; extra?: s
 export function BoxBody({ el }: { el: BoxElement }) {
   const fill = el.fill === 'white' ? '#FFFDF9' : el.fill ? tint(el.fill) : 'transparent';
   return (
-    <div className={`pp-box border-${el.border}`} style={{ background: fill }}>
+    <div className={`pp-box border-${el.border}${el.shadow ? ' has-shadow' : ''}`} style={{ background: fill }}>
       {el.title && <div className="pp-box-title">{el.title}</div>}
     </div>
   );

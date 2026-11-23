@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useStore, type BackupFile } from '../data/store';
 import { LOCALE, todayKey } from '../domain/dates';
 import type { ThemeId } from '../domain/types';
+import { isJournalPage } from '../domain/pages';
 import { PageHeader } from '../ui/Layout';
 import { Sheet } from '../ui/Sheet';
 import { useSync } from '../data/sync';
@@ -19,7 +20,7 @@ export function Settings() {
   const persistent = useStore((s) => s.persistent);
   const trackerCount = useStore((s) => s.trackers.length);
   const entryCount = useStore((s) => s.entries.length);
-  const pageCount = useStore((s) => s.pages.filter((p) => !p.isTemplate).length);
+  const pageCount = useStore((s) => s.pages.filter(isJournalPage).length);
   const counts = { t: trackerCount, e: entryCount };
   const { updateSettings, exportBackup, importBackup } = useStore.getState();
   const fileRef = useRef<HTMLInputElement>(null);

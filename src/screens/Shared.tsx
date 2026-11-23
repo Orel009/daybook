@@ -4,7 +4,7 @@ import { acceptCopy, declineCopy, sharedPhotos, useShared, type CopyOffer } from
 import { useToday } from '../data/hooks';
 import { useStore } from '../data/store';
 import { LOCALE, formatShort } from '../domain/dates';
-import type { Page } from '../domain/pages';
+import { bookOrder, coverOf, isJournalPage, type Page } from '../domain/pages';
 import { buildDayMap, formatDay, formatValue, scheduleLabel, streakLabel, streaks } from '../domain/stats';
 import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
 import { EmptyState, PageHeader } from '../ui/Layout';
@@ -22,6 +22,9 @@ interface Owner {
   key: string;
   name: string;
   pages: Page[];
+  /** The owner's own covers, when the whole book is shared and they designed them. */
+  cover?: Page;
+  back?: Page;
   trackers: TrackerDefinition[];
   entries: TrackerEntry[];
   hasBook: boolean;
@@ -39,11 +42,14 @@ export function useOwners(): Owner[] {
       const of = <T,>(kind: string) => mine.filter((i) => i.kind === kind).map((i) => i.data as unknown as T);
       const trackers = of<TrackerDefinition>('tracker').sort((a, b) => a.sortOrder - b.sortOrder);
       const entries = of<TrackerEntry>('entry');
-      const pages = of<Page>('page').filter((p) => !p.isTemplate);
+      const everyPage = of<Page>('page');
+      const pages = everyPage.filter(isJournalPage);
       return {
         key,
         name: shares.find((s) => s.owner_key === key)?.owner_name ?? 'Someone',
         pages,
+        cover: coverOf(everyPage, 'cover'),
+        back: coverOf(everyPage, 'back'),
         trackers,
         entries,
         hasBook: shares.some((s) => s.owner_key === key && s.scope === 'book'),
@@ -339,13 +345,15 @@ export function SharedTrackerScreen() {
 export function SharedBookScreen() {
   const { owner } = useParams();
   const o = useOwner(owner);
-  const pages = useMemo(() => (o ? [...o.pages].sort((a, b) => a.sortOrder - b.sortOrder) : []), [o]);
+  const pages = useMemo(() => (o ? bookOrder(o.pages) : []), [o]);
   if (!o || !o.hasBook) return <Gone what="book" back="Back to the book" to="/book" />;
   return (
     <PageSourceContext.Provider value={o.source}>
       <BookView
         pages={pages}
         owner={o.name}
+        cover={o.cover}
+        back={o.back}
         header={<PageHeader title={`${o.name}’s book`} sub="Shared with you · view only" back={<BackLink to="/book" label="Back to your book" />} />}
         empty={<EmptyState emoji="📖" title={`${o.name}’s book has no pages yet`} />}
       />

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../data/store';
 import { LOCALE } from '../domain/dates';
-import type { Page, PageSize } from '../domain/pages';
+import { isJournalPage, type Page, type PageSize } from '../domain/pages';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
 import { Sheet } from '../ui/Sheet';
@@ -124,7 +124,7 @@ function NewPageSheet({ onClose }: { onClose: () => void }) {
 
 export function Journal() {
   const pages = useStore((s) => s.pages)
-    .filter((p) => !p.isTemplate)
+    .filter(isJournalPage)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const [creating, setCreating] = useState(false);
 

@@ -216,7 +216,7 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
           className={`pg-text ${el.note ? 'is-note' : ''}`}
           style={{
             fontFamily: fontOf(el.font).family,
-            fontWeight: fontOf(el.font).weight,
+            fontWeight: el.bold ? Math.max(700, fontOf(el.font).weight) : fontOf(el.font).weight,
             fontSize: el.size,
             color: el.color,
             textAlign: el.align,
@@ -272,10 +272,12 @@ interface SurfaceProps {
   children: ReactNode;
   className?: string;
   onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  /** Front cover: how many pages the book has, for its "12 pages" line. */
+  coverCount?: number;
 }
 
 /** The sheet of paper: background, pattern, and a layer measured in page units. */
-export function PageSurface({ page, width, children, className, onPointerDown }: SurfaceProps) {
+export function PageSurface({ page, width, children, className, onPointerDown, coverCount }: SurfaceProps) {
   const { w, h } = PAGE_DIMS[page.size];
   const scale = width / w;
   const bgUrl = usePagePhoto(page.background.assetId);
@@ -295,7 +297,13 @@ export function PageSurface({ page, width, children, className, onPointerDown }:
         }}
       >
         {bgUrl && <img className="pg-bg" src={bgUrl} alt="" draggable={false} />}
+        {page.role && <span className={`pg-spine is-${page.role}`} style={page.spine ? { background: page.spine } : undefined} aria-hidden="true" />}
         {children}
+        {page.role === 'cover' && !page.hideCount && coverCount !== undefined && (
+          <small className={`pg-cover-count ${dark ? 'is-light' : ''}`}>
+            {coverCount} page{coverCount === 1 ? '' : 's'}
+          </small>
+        )}
       </div>
     </div>
   );
@@ -307,12 +315,13 @@ interface StaticProps {
   live?: boolean;
   /** View mode only: saves what is typed or ticked in a fillable part. */
   onElementChange?: (id: string, patch: Record<string, unknown>) => void;
+  coverCount?: number;
 }
 
 /** A whole page without editing handles. Used for viewing and for thumbnails. */
-export function StaticPage({ page, width, live = false, onElementChange }: StaticProps) {
+export function StaticPage({ page, width, live = false, onElementChange, coverCount }: StaticProps) {
   return (
-    <PageSurface page={page} width={width} className={live ? 'is-live' : 'is-thumb'}>
+    <PageSurface page={page} width={width} className={live ? 'is-live' : 'is-thumb'} coverCount={coverCount}>
       {page.elements.map((el) => (
         <div key={el.id} className={`pg-el type-${el.type} ${isFillable(el) ? 'is-fillable' : ''}`} style={frameStyle(el)}>
           <ElementBody el={el} live={live} onChange={live && onElementChange ? (patch) => onElementChange(el.id, patch) : undefined} />

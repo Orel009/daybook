@@ -15,7 +15,7 @@ export const PAGE_DIMS: Record<PageSize, { w: number; h: number }> = {
   landscape: { w: 1200, h: 900 },
 };
 
-export type PagePattern = 'dots' | 'grid' | 'lines' | 'plain';
+export type PagePattern = 'dots' | 'grid' | 'lines' | 'plain' | 'cover' | 'linen' | 'leather' | 'kraft' | 'floral' | 'pastel' | 'night';
 
 export interface PageBackground {
   color: string; // hex
@@ -60,6 +60,7 @@ export interface TextElement extends ElementBase {
   color: string; // hex
   align: 'left' | 'center' | 'right';
   note?: string; // sticky-note colour (key of TAPE_COLORS), or none
+  bold?: boolean; // heavier than the lettering's own weight
 }
 
 export interface PhotoElement extends ElementBase {
@@ -177,6 +178,7 @@ export interface BoxElement extends ElementBase {
   fill?: string; // key of TAPE_COLORS, 'white', or none for see-through
   border: 'solid' | 'dashed' | 'none';
   title?: string;
+  shadow?: boolean; // a hard shadow, like a label stuck on
 }
 
 export interface ChecklistItem {
@@ -318,10 +320,27 @@ export interface Page {
   /** Templates live in the template library and are copied when used. */
   isTemplate: boolean;
   sortOrder: number;
+  /** The book's own covers. They are pages like any other, kept out of the journal, the page count and Arrange. */
+  role?: 'cover' | 'back';
+  /** Covers: colour of the strip along the binding (hex). */
+  spine?: string;
+  /** Front cover: leave out the "12 pages" line. */
+  hideCount?: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string; // tombstone, kept so the delete reaches other devices
 }
+
+/** A page of the journal: not a template, not a cover. */
+export const isJournalPage = (p: Pick<Page, 'isTemplate' | 'role'>): boolean => !p.isTemplate && !p.role;
+
+/** Journal pages in book order. */
+export const bookOrder = <T extends Pick<Page, 'id' | 'isTemplate' | 'role' | 'sortOrder'>>(pages: readonly T[]): T[] =>
+  pages.filter(isJournalPage).sort((a, b) => a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+/** The book's front or back cover page, if one was made (the newest, should two devices each have made one). */
+export const coverOf = <T extends Pick<Page, 'role' | 'updatedAt'>>(pages: readonly T[], role: 'cover' | 'back'): T | undefined =>
+  pages.filter((p) => p.role === role).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 
 /** Elements whose height is decided by their content, not by `h`. */
 export const autoHeight = (el: PageElement): boolean => el.type === 'text' || el.type === 'tracker' || el.type === 'checklist';
@@ -335,6 +354,17 @@ export const PATTERNS: { id: PagePattern; name: string }[] = [
   { id: 'grid', name: 'Grid' },
   { id: 'lines', name: 'Lines' },
   { id: 'plain', name: 'Plain' },
+];
+
+/** Papers with a texture, made for covers and dividers but usable on any page. */
+export const TEXTURES: { id: PagePattern; name: string }[] = [
+  { id: 'cover', name: 'Polka' },
+  { id: 'linen', name: 'Linen' },
+  { id: 'leather', name: 'Leather' },
+  { id: 'kraft', name: 'Kraft' },
+  { id: 'floral', name: 'Floral' },
+  { id: 'pastel', name: 'Pastel' },
+  { id: 'night', name: 'Night sky' },
 ];
 
 // Sticker sets. Each is a named group of emoji; add a set or an emoji here and
@@ -615,17 +645,21 @@ export const blankPage = (title: string, size: PageSize, sortOrder: number): Pag
 });
 
 /** A full copy with fresh ids, so the copy and the original never share elements. */
-export const copyPage = (source: Page, title: string, sortOrder: number, isTemplate: boolean): Page => ({
-  ...source,
-  id: newId(),
-  title,
-  isTemplate,
-  sortOrder,
-  background: { ...source.background },
-  elements: source.elements.map((e) => ({ ...e, id: newId() })),
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-});
+export const copyPage = (source: Page, title: string, sortOrder: number, isTemplate: boolean): Page => {
+  // a copy is an ordinary page, even when it was made from a cover
+  const { role: _role, spine: _spine, hideCount: _hideCount, ...rest } = source;
+  return {
+    ...rest,
+    id: newId(),
+    title,
+    isTemplate,
+    sortOrder,
+    background: { ...source.background },
+    elements: source.elements.map((e) => ({ ...e, id: newId() })),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+};
 
 export const assetIdsOf = (page: Page): string[] => {
   const ids = page.elements.flatMap((e) => (e.type === 'photo' ? [e.assetId] : (e.type === 'sticker' || e.type === 'frame') && e.assetId ? [e.assetId] : []));

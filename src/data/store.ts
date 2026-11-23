@@ -3,7 +3,8 @@ import type { Category, EntryValue, Settings, TrackerDefinition, TrackerEntry, D
 import { newId } from '../domain/types';
 import * as db from './db';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, type TrackerDraft } from './defaults';
-import { assetIdsOf, blankPage, copyPage, type Page, type PageSize } from '../domain/pages';
+import { assetIdsOf, blankPage, copyPage, coverOf, isJournalPage, type Page, type PageSize } from '../domain/pages';
+import { coverPage, matchingBack, standardCover } from '../domain/covers';
 import { exportAssets, forgetAllAssets, importAssets, removeUnusedAssets, type BackupAsset } from './assets';
 import { markDirty, markManyDirty } from './outbox';
 import type { SyncKind } from './merge';
@@ -34,6 +35,11 @@ export interface IncomingRecord {
 }
 
 const live = <T extends { deletedAt?: string }>(list: T[]) => list.filter((x) => !x.deletedAt);
+
+// A cover opened with "Edit cover" exists only in memory until something on it
+// is changed: opening the editor and leaving again leaves the book as it was.
+const unsavedCovers = new Set<string>();
+export const isUnsavedCover = (id: string): boolean => unsavedCovers.has(id);
 const byOrder = <T extends { sortOrder: number }>(list: T[]) => [...list].sort((a, b) => a.sortOrder - b.sortOrder);
 
 /** Every photo still in use: on a page, or kept in "My stickers". */
@@ -78,6 +84,10 @@ interface State {
   deletePage: (id: string) => void;
   /** Swap a journal page with its neighbour in book order. */
   movePage: (id: string, by: 1 | -1) => void;
+  /** The book's cover page to edit: made from the built-in look the first time (`accent` is the theme colour), stored with its first change. */
+  ensureCover: (role: 'cover' | 'back', accent: string) => Page;
+  /** Forgets covers that were opened for editing but never changed. */
+  dropUnsavedCovers: () => void;
   exportBackup: () => Promise<BackupFile>;
   importBackup: (file: BackupFile) => Promise<void>;
   /** Writes records pulled from the cloud, without marking them for upload. */
@@ -213,6 +223,7 @@ export const useStore = create<State>((set, get) => ({
 
   savePage: (page) => {
     const next = { ...page, updatedAt: now() };
+    unsavedCovers.delete(page.id);
     set((s) => ({ pages: s.pages.some((p) => p.id === page.id) ? s.pages.map((p) => (p.id === page.id ? next : p)) : [...s.pages, next] }));
     save('pages', next);
   },
@@ -221,12 +232,13 @@ export const useStore = create<State>((set, get) => ({
     const page = get().pages.find((p) => p.id === id);
     if (!page) return;
     set((s) => ({ pages: s.pages.filter((p) => p.id !== id) }));
+    if (unsavedCovers.delete(id)) return; // never stored: nothing to tell other devices
     save('pages', { ...page, deletedAt: now(), updatedAt: now() });
     void removeUnusedAssets(new Set(usedAssets(get().pages, get().settings)), true);
   },
 
   movePage: (id, by) => {
-    const ordered = get().pages.filter((p) => !p.isTemplate).sort((a, b) => a.sortOrder - b.sortOrder);
+    const ordered = get().pages.filter(isJournalPage).sort((a, b) => a.sortOrder - b.sortOrder);
     const i = ordered.findIndex((p) => p.id === id);
     const other = ordered[i + by];
     if (i < 0 || !other) return;
@@ -235,6 +247,22 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({ pages: s.pages.map((p) => (p.id === a.id ? a : p.id === b.id ? b : p)) }));
     save('pages', a);
     save('pages', b);
+  },
+
+  ensureCover: (role, accent) => {
+    const existing = coverOf(get().pages, role);
+    if (existing) return existing;
+    const front = coverOf(get().pages, 'cover');
+    const design = role === 'back' && front ? matchingBack(front) : role === 'back' ? { ...standardCover('', accent), elements: [] } : standardCover(get().settings.ownerName, accent);
+    const page = coverPage(role, { background: { ...design.background }, spine: design.spine, elements: design.elements });
+    unsavedCovers.add(page.id);
+    set((s) => ({ pages: [...s.pages, page] }));
+    return page;
+  },
+
+  dropUnsavedCovers: () => {
+    if (get().pages.some((p) => unsavedCovers.has(p.id))) set((s) => ({ pages: s.pages.filter((p) => !unsavedCovers.has(p.id)) }));
+    unsavedCovers.clear();
   },
 
   exportBackup: async () => {
@@ -247,7 +275,7 @@ export const useStore = create<State>((set, get) => ({
       entries: s.entries,
       categories: s.categories.filter((c) => !c.builtIn),
       settings: s.settings,
-      pages: s.pages,
+      pages: s.pages.filter((p) => !unsavedCovers.has(p.id)),
       assets: await exportAssets(usedAssets(s.pages, s.settings)),
     };
   },

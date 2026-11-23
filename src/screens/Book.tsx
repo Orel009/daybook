@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { useStore } from '../data/store';
-import type { Page } from '../domain/pages';
+import { Link, useNavigate } from 'react-router-dom';
+import { isUnsavedCover, useStore } from '../data/store';
+import { matchingBack } from '../domain/covers';
+import { bookOrder, coverOf, type Page } from '../domain/pages';
+import { themeAccent } from '../ui/dom';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
 import { SharedBooksList } from './Shared';
@@ -12,7 +14,7 @@ import { SharedBooksList } from './Shared';
 //     page being left, its back the page being arrived at
 // Pages here are for reading; "Open" goes to the page itself for writing.
 
-type Side = { kind: 'cover' } | { kind: 'back' } | { kind: 'blank' } | { kind: 'page'; page: Page };
+type Side = { kind: 'cover'; page?: Page } | { kind: 'back'; page?: Page } | { kind: 'blank' } | { kind: 'page'; page: Page };
 
 const TURN_MS = 620;
 const RATIO = 3 / 4; // every side is a tall sheet; wide pages are fitted inside
@@ -20,6 +22,14 @@ const RATIO = 3 / 4; // every side is a tall sheet; wide pages are fitted inside
 function SideView({ side, width, owner, count }: { side: Side | undefined; width: number; owner: string; count: number }) {
   const height = width / RATIO;
   if (!side) return <div className="bk-side is-empty" style={{ width, height }} />;
+  if ((side.kind === 'cover' || side.kind === 'back') && side.page) {
+    // a cover the owner designed: an ordinary page, drawn edge to edge
+    return (
+      <div className={`bk-side bk-own-cover ${side.kind === 'back' ? 'is-back' : ''}`} style={{ width, height }}>
+        <StaticPage page={side.page} width={width} coverCount={count} />
+      </div>
+    );
+  }
   if (side.kind === 'cover') {
     return (
       <div className="bk-side bk-cover" style={{ width, height }}>
@@ -46,15 +56,37 @@ function SideView({ side, width, owner, count }: { side: Side | undefined; width
 
 /** This book, with reordering and a way into each page. */
 export function Book() {
+  const navigate = useNavigate();
   const allPages = useStore((s) => s.pages);
   const owner = useStore((s) => s.settings.ownerName);
   const movePage = useStore((s) => s.movePage);
-  const pages = useMemo(() => allPages.filter((p) => !p.isTemplate).sort((a, b) => a.sortOrder - b.sortOrder), [allPages]);
+  const ensureCover = useStore((s) => s.ensureCover);
+  const pages = useMemo(() => bookOrder(allPages), [allPages]);
+  // a cover that was opened for editing and left unchanged is not the book's cover
+  const dropUnsavedCovers = useStore((s) => s.dropUnsavedCovers);
+  useEffect(() => dropUnsavedCovers(), [dropUnsavedCovers]);
+  const saved = useMemo(() => allPages.filter((p) => !isUnsavedCover(p.id)), [allPages]);
+  const cover = useMemo(() => coverOf(saved, 'cover'), [saved]);
+  const back = useMemo(() => coverOf(saved, 'back'), [saved]);
   return (
     <BookView
       pages={pages}
       owner={owner}
+      cover={cover}
+      back={back}
       header={<PageHeader title="Book" sub="Swipe, tap the arrows or use the arrow keys to turn the page" />}
+      coverAction={(which) => (
+        <button
+          className="btn btn-small btn-primary"
+          onClick={() => {
+            // the first time, the cover page is made from the look the book has now
+            const page = ensureCover(which, themeAccent());
+            navigate(`/journal/${page.id}?edit=1`);
+          }}
+        >
+          {which === 'cover' ? 'Edit cover' : 'Edit back cover'}
+        </button>
+      )}
       empty={
         <>
           <PageHeader title="Book" />
@@ -93,19 +125,25 @@ interface BookViewProps {
   empty: ReactNode;
   /** Buttons under the pages in view (own book only). */
   pageActions?: (page: Page, number: number, total: number) => ReactNode;
+  /** The covers as the owner designed them; without them the book draws its standard covers. */
+  cover?: Page;
+  back?: Page;
+  /** A button shown while a cover is in view (own book only). */
+  coverAction?: (which: 'cover' | 'back') => ReactNode;
   after?: ReactNode;
 }
 
 /** Any book: this one, one shared with this account, or one opened from a public link. */
-export function BookView({ pages, owner, header, empty, pageActions, after }: BookViewProps) {
+export function BookView({ pages, owner, header, empty, pageActions, cover, back, coverAction, after }: BookViewProps) {
 
   // cover, pages, a blank if needed so the back cover closes on the left, back cover
   const sides = useMemo<Side[]>(() => {
-    const list: Side[] = [{ kind: 'cover' }, ...pages.map((page) => ({ kind: 'page' as const, page }))];
+    const list: Side[] = [{ kind: 'cover', page: cover }, ...pages.map((page) => ({ kind: 'page' as const, page }))];
     if (pages.length % 2 === 1) list.push({ kind: 'blank' });
-    list.push({ kind: 'back' });
+    // a back cover without a design of its own matches the front
+    list.push({ kind: 'back', page: back ?? (cover ? matchingBack(cover) : undefined) });
     return list;
-  }, [pages]);
+  }, [pages, cover, back]);
 
   // ----- sizing
   const area = useRef<HTMLDivElement>(null);
@@ -245,6 +283,8 @@ export function BookView({ pages, owner, header, empty, pageActions, after }: Bo
           Next ›
         </button>
       </div>
+
+      {coverAction && shown.length === 0 && <div className="bk-cover-actions">{coverAction(at === 0 ? 'cover' : 'back')}</div>}
 
       {shown.length > 0 && (
         <ul className="bk-pages">

@@ -6,6 +6,7 @@ import { useStore } from '../data/store';
 import {
   autoHeight,
   BG_COLORS,
+  bookOrder,
   CHALLENGE_PRESETS,
   FRAME_STYLES,
   newBook,
@@ -17,6 +18,7 @@ import {
   newGrid,
   GRID_PRESETS,
   isWritable,
+  TEXTURES,
   TILE_LAYOUTS,
   TILE_SHAPES,
   type FrameElement,
@@ -50,7 +52,9 @@ import { monthTitle } from '../ui/PageParts';
 import { Sheet } from '../ui/Sheet';
 import { ShareSheet } from '../ui/ShareSheet';
 import { pageTrackerIds } from '../data/shareRules';
+import { backPreset, COVER_PRESETS, coverPreset, SPINE_COLORS } from '../domain/covers';
 import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
+import { scrollerOf, themeAccent } from '../ui/dom';
 
 type Mode = 'move' | 'resize' | 'width' | 'rotate';
 type Patch = Record<string, unknown>;
@@ -172,15 +176,8 @@ function TextStyleFields({ el, onPatch }: { el: PartTextStyle; onPatch: (patch: 
   );
 }
 
-/** The nearest ancestor that scrolls (or the page itself). */
-function scrollerOf(el: HTMLElement): HTMLElement {
-  for (let n = el.parentElement; n; n = n.parentElement) {
-    const y = getComputedStyle(n).overflowY;
-    if ((y === 'auto' || y === 'scroll') && n.scrollHeight > n.clientHeight) return n;
-  }
-  return (document.scrollingElement as HTMLElement) ?? document.documentElement;
-}
-
+const COVER_COLORS: [string, string][] = ['#F3A3BA', '#F8C19B', '#F6DB7D', '#A9DFC4', '#A8CDF2', '#C9B6F0', '#E9E1D3', '#CFAE86', '#6B4A3A', '#262B4A'].map((c) => [c, c]);
+const SPINE_LIST: [string, string][] = SPINE_COLORS.map((c) => [c, c]);
 const BASIC_TAPES = new Set<string>(TAPE_PATTERNS.map((t) => t.id));
 const themeOfTape = (pattern: string): TapeTheme => THEMED_TAPES.find((t) => t.id === pattern)?.theme ?? 'basics';
 
@@ -218,7 +215,9 @@ function PageEditor({ stored }: { stored: Page }) {
   const propsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
-  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid'>(null);
+  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover'>(null);
+  const isCover = Boolean(stored.role);
+  const pageCount = useStore((st) => bookOrder(st.pages).length);
   // photo slots: which one the picker is filling, and which one's photo is being positioned
   const frameInput = useRef<HTMLInputElement>(null);
   const frameTarget = useRef<string | null>(null);
@@ -551,11 +550,28 @@ function PageEditor({ stored }: { stored: Page }) {
     if (stickerInput.current) stickerInput.current.value = '';
   };
 
-  const backTo = page.isTemplate ? '/templates' : '/journal';
+  const backTo = isCover ? '/book' : page.isTemplate ? '/templates' : '/journal';
+  const coverName = page.role === 'back' ? 'Back cover' : 'Front cover';
+  const applyCover = (id: (typeof COVER_PRESETS)[number]['id']) => {
+    const owner = useStore.getState().settings.ownerName;
+    change((p) => {
+      // the front gets the whole design; the back only its paper and spine
+      if (p.role === 'back') return { ...p, background: backPreset(id, themeAccent()).background, spine: backPreset(id, themeAccent()).spine };
+      const d = coverPreset(id, owner, themeAccent());
+      return { ...p, background: d.background, spine: d.spine, elements: d.elements };
+    });
+    setSelectedId(null);
+    setSheet(null);
+  };
 
   // ----- panels
   const tools = editing && (
     <div className="pe-tools" role="toolbar" aria-label="Add to page">
+      {isCover && (
+        <button className="pe-tool" onClick={() => setSheet('cover')}>
+          <span aria-hidden="true">📕</span>Cover
+        </button>
+      )}
       <button className="pe-tool" onClick={() => addEl(newText(pageRef.current))}>
         <span aria-hidden="true">✏️</span>Text
       </button>
@@ -651,6 +667,9 @@ function PageEditor({ stored }: { stored: Page }) {
                     </button>
                   ))}
                 </div>
+                <button className={`chip ${selected.bold ? 'is-on' : ''}`} aria-pressed={!!selected.bold} onClick={() => patchEl(selected.id, { bold: selected.bold ? undefined : true })}>
+                  Bold
+                </button>
               </div>
               <label className="pe-slider">
                 <span>Size</span>
@@ -897,12 +916,17 @@ function PageEditor({ stored }: { stored: Page }) {
 
           {selected.type === 'box' && (
             <>
-              <div className="seg seg-small" role="radiogroup" aria-label="Border">
-                {([['solid', 'Solid line'], ['dashed', 'Dashed'], ['none', 'No line']] as const).map(([f, name]) => (
-                  <button key={f} role="radio" aria-checked={selected.border === f} className={selected.border === f ? 'is-on' : ''} onClick={() => patchEl(selected.id, { border: f })}>
-                    {name}
-                  </button>
-                ))}
+              <div className="pe-row">
+                <div className="seg seg-small" role="radiogroup" aria-label="Border">
+                  {([['solid', 'Solid line'], ['dashed', 'Dashed'], ['none', 'No line']] as const).map(([f, name]) => (
+                    <button key={f} role="radio" aria-checked={selected.border === f} className={selected.border === f ? 'is-on' : ''} onClick={() => patchEl(selected.id, { border: f })}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button className={`chip ${selected.shadow ? 'is-on' : ''}`} aria-pressed={!!selected.shadow} onClick={() => patchEl(selected.id, { shadow: selected.shadow ? undefined : true })}>
+                  Shadow
+                </button>
               </div>
               <div className="pe-field">
                 <span>Fill</span>
@@ -1047,16 +1071,19 @@ function PageEditor({ stored }: { stored: Page }) {
   return (
     <div className={`pe ${editing ? 'is-editing' : ''} ${selected ? 'has-selection' : ''}`}>
       <header className="page-head pe-head">
-        <Link to={backTo} className="icon-btn" aria-label={page.isTemplate ? 'Back to templates' : 'Back to journal'}>
+        <Link to={backTo} className="icon-btn" aria-label={isCover ? 'Back to the book' : page.isTemplate ? 'Back to templates' : 'Back to journal'}>
           ‹
         </Link>
         <div className="page-head-text">
-          {editing ? (
+          {isCover ? (
+            <h1>{coverName}</h1>
+          ) : editing ? (
             <input className="pe-title" type="text" value={page.title} onChange={(e) => change((p) => ({ ...p, title: e.target.value }), 'title')} aria-label="Page title" maxLength={60} />
           ) : (
             <h1>{page.title || 'Untitled page'}</h1>
           )}
           {page.isTemplate && <p className="muted">Template</p>}
+          {isCover && <p className="muted">Of your book</p>}
         </div>
         <div className="page-head-action pe-head-actions">
           <button className="btn" onClick={() => setSheet('more')}>
@@ -1094,7 +1121,7 @@ function PageEditor({ stored }: { stored: Page }) {
           }}
         >
           {editing ? (
-            <PageSurface page={page} width={width} className="is-edit" onPointerDown={(e) => e.target === e.currentTarget && setSelectedId(null)}>
+            <PageSurface page={page} width={width} className="is-edit" coverCount={pageCount} onPointerDown={(e) => e.target === e.currentTarget && setSelectedId(null)}>
               {page.elements.map((el) => {
                 const on = el.id === selectedId;
                 const typing = on && isWritable(el);
@@ -1151,6 +1178,7 @@ function PageEditor({ stored }: { stored: Page }) {
               page={page}
               width={width}
               live
+              coverCount={pageCount}
               onElementChange={(elId, patch) => {
                 // typing and ticking on the finished page saves straight away
                 const p = pageRef.current;
@@ -1305,12 +1333,22 @@ function PageEditor({ stored }: { stored: Page }) {
         <Sheet title="Paper" onClose={() => setSheet(null)}>
           <div className="pe-field">
             <span>Colour</span>
-            <Swatches colors={BG_LIST} value={page.background.color} label="Paper colour" onPick={(c) => c && change((p) => ({ ...p, background: { ...p.background, color: c } }))} />
+            <Swatches colors={isCover ? [...BG_LIST, ...COVER_COLORS] : BG_LIST} value={page.background.color} label="Paper colour" onPick={(c) => c && change((p) => ({ ...p, background: { ...p.background, color: c } }))} />
           </div>
           <div className="pe-field">
             <span>Pattern</span>
             <div className="seg seg-small" role="radiogroup" aria-label="Paper pattern">
               {PATTERNS.map((pt) => (
+                <button key={pt.id} role="radio" aria-checked={page.background.pattern === pt.id} className={page.background.pattern === pt.id ? 'is-on' : ''} onClick={() => change((p) => ({ ...p, background: { ...p.background, pattern: pt.id } }))}>
+                  {pt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pe-field">
+            <span>Texture</span>
+            <div className="seg seg-small seg-wrap" role="radiogroup" aria-label="Paper texture">
+              {TEXTURES.map((pt) => (
                 <button key={pt.id} role="radio" aria-checked={page.background.pattern === pt.id} className={page.background.pattern === pt.id ? 'is-on' : ''} onClick={() => change((p) => ({ ...p, background: { ...p.background, pattern: pt.id } }))}>
                   {pt.name}
                 </button>
@@ -1334,19 +1372,57 @@ function PageEditor({ stored }: { stored: Page }) {
         </Sheet>
       )}
 
-      {sheet === 'more' && (
-        <Sheet title={page.title || 'Untitled page'} onClose={() => setSheet(null)}>
-          <div className="menu-list">
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setSheet(null);
-                setSharing(true);
-              }}
-            >
-              Share…
+      {sheet === 'cover' && (
+        <Sheet title={coverName} onClose={() => setSheet(null)}>
+          <div className="pe-field">
+            <span>Start from a design</span>
+            <div className="cover-presets">
+              {COVER_PRESETS.map((c) => (
+                <button key={c.id} className="cover-preset" onClick={() => applyCover(c.id)}>
+                  <i style={{ background: c.id === 'classic' ? themeAccent() : c.swatch }} className={`pattern-${c.id === 'classic' ? 'cover' : c.id}`} aria-hidden="true" />
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            <small className="muted">
+              {page.role === 'back' ? 'Changes the paper and the spine. What you put on the back cover stays.' : 'Replaces what is on the cover now. Undo brings it back.'}
+            </small>
+          </div>
+          <div className="pe-field">
+            <span>Spine</span>
+            <Swatches colors={SPINE_LIST} value={page.spine} label="Spine colour" allowNone onPick={(c) => change((p) => ({ ...p, spine: c }))} />
+          </div>
+          {page.role === 'cover' && (
+            <button className={`chip ${page.hideCount ? '' : 'is-on'}`} aria-pressed={!page.hideCount} onClick={() => change((p) => ({ ...p, hideCount: p.hideCount ? undefined : true }))}>
+              Show the number of pages
             </button>
-            {page.isTemplate ? (
+          )}
+          <p className="muted">Everything else works as on any page: Paper for the colour and texture, and text, photos, stickers and tape on top.</p>
+        </Sheet>
+      )}
+
+      {sheet === 'more' && (
+        <Sheet title={isCover ? coverName : page.title || 'Untitled page'} onClose={() => setSheet(null)}>
+          <div className="menu-list">
+            {isCover ? (
+              <>
+                <p className="muted">The covers are shared together with the whole book.</p>
+                <button className="btn" onClick={() => setSheet('cover')}>
+                  Cover designs and spine
+                </button>
+              </>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setSheet(null);
+                  setSharing(true);
+                }}
+              >
+                Share…
+              </button>
+            )}
+            {isCover ? null : page.isTemplate ? (
               <button
                 className="btn"
                 onClick={() => {
@@ -1380,7 +1456,7 @@ function PageEditor({ stored }: { stored: Page }) {
               </>
             )}
             <button className="btn danger" onClick={() => setSheet('delete')}>
-              Delete this {page.isTemplate ? 'template' : 'page'}
+              {isCover ? 'Go back to the standard cover' : `Delete this ${page.isTemplate ? 'template' : 'page'}`}
             </button>
           </div>
         </Sheet>
@@ -1432,7 +1508,7 @@ function PageEditor({ stored }: { stored: Page }) {
 
       {sheet === 'delete' && (
         <Sheet
-          title={`Delete ${page.title || 'this page'}?`}
+          title={isCover ? 'Go back to the standard cover?' : `Delete ${page.title || 'this page'}?`}
           onClose={() => setSheet(null)}
           footer={
             <>
@@ -1446,12 +1522,16 @@ function PageEditor({ stored }: { stored: Page }) {
                   navigate(backTo);
                 }}
               >
-                Delete {page.isTemplate ? 'template' : 'page'}
+                {isCover ? 'Remove my design' : `Delete ${page.isTemplate ? 'template' : 'page'}`}
               </button>
             </>
           }
         >
-          <p>This removes the {page.isTemplate ? 'template' : 'page'} and its layout for good. Trackers shown on it keep all their history.</p>
+          {isCover ? (
+            <p>This removes your design for the {coverName.toLowerCase()} for good. The book shows its standard cover again, and you can design a new one any time.</p>
+          ) : (
+            <p>This removes the {page.isTemplate ? 'template' : 'page'} and its layout for good. Trackers shown on it keep all their history.</p>
+          )}
         </Sheet>
       )}
     </div>

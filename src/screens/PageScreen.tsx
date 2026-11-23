@@ -6,13 +6,16 @@ import { useStore } from '../data/store';
 import {
   autoHeight,
   BG_COLORS,
+  FRAME_STYLES,
   newBook,
   newBookshelf,
   newBox,
   newChecklist,
+  newFrame,
   newGrid,
   GRID_PRESETS,
   isWritable,
+  type FrameElement,
   type PartTextStyle,
   newCustomSticker,
   newDrawnSticker,
@@ -51,6 +54,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const TYPE_NAMES: Record<PageElement['type'], string> = {
   text: 'Text',
   photo: 'Photo',
+  frame: 'Photo slot',
   sticker: 'Sticker',
   tape: 'Tape',
   tracker: 'Tracker',
@@ -94,7 +98,7 @@ function applyGesture(start: PageElement, h0: number, mode: Mode, dx: number, dy
   } else if (start.type === 'tape') {
     w = Math.max(40, start.w + lx);
     h = Math.max(16, h0 + ly);
-  } else if (start.type === 'box' || start.type === 'table' || start.type === 'writing' || start.type === 'month' || start.type === 'bookshelf') {
+  } else if (start.type === 'box' || start.type === 'table' || start.type === 'writing' || start.type === 'month' || start.type === 'bookshelf' || start.type === 'frame') {
     w = Math.max(120, start.w + lx);
     h = Math.max(80, h0 + ly);
   } else {
@@ -172,6 +176,7 @@ function scrollerOf(el: HTMLElement): HTMLElement {
   return (document.scrollingElement as HTMLElement) ?? document.documentElement;
 }
 
+
 /**
  * On narrow screens the options panel sits over the bottom of the screen.
  * Scrolls so `part` is fully visible above it (or, if it is taller than the
@@ -207,6 +212,11 @@ function PageEditor({ stored }: { stored: Page }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
   const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid'>(null);
+  // photo slots: which one the picker is filling, and which one's photo is being positioned
+  const frameInput = useRef<HTMLInputElement>(null);
+  const frameTarget = useRef<string | null>(null);
+  const [croppingId, setCroppingId] = useState<string | null>(null);
+  const lastPress = useRef({ id: '', wasSelected: false, moved: false });
   const [sharing, setSharing] = useState(false);
   const [message, setMessage] = useState('');
   const [stickerSet, setStickerSet] = useState(STICKER_SETS[0].id); // stays on the last set used
@@ -299,6 +309,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const begin = (e: React.PointerEvent, el: PageElement, mode: Mode) => {
     e.stopPropagation();
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    lastPress.current = { id: el.id, wasSelected: selectedId === el.id, moved: false };
     setSelectedId(el.id);
     const node = (e.currentTarget as HTMLElement).closest('.pg-el') as HTMLElement;
     const rect = node.getBoundingClientRect();
@@ -307,6 +318,7 @@ function PageEditor({ stored }: { stored: Page }) {
       if (!g.moved) {
         if (Math.hypot(ev.clientX - g.sx, ev.clientY - g.sy) < 4) return; // a tap, not a drag
         g.moved = true;
+        lastPress.current.moved = true;
         remember();
       }
       const s = scaleRef.current;
@@ -332,6 +344,98 @@ function PageEditor({ stored }: { stored: Page }) {
     window.addEventListener('pointercancel', end);
   };
 
+  // ----- photo slots: drag the photo inside its frame, pinch or scroll to zoom
+  const fingers = useRef(new Map<number, { x: number; y: number }>());
+  const beginPan = (e: React.PointerEvent, el: FrameElement) => {
+    e.stopPropagation();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const node = e.currentTarget as HTMLElement;
+    const win = node.querySelector<HTMLElement>('.pg-frame-window');
+    const img = win?.querySelector('img');
+    if (!win || !img?.naturalWidth) return;
+    const pts = fingers.current;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size > 1) return; // the first finger's listeners handle the pinch
+    const current = () => pageRef.current.elements.find((x) => x.id === el.id) as FrameElement | undefined;
+    const ratio = img.naturalWidth / img.naturalHeight;
+    const ww = win.offsetWidth;
+    const wh = win.offsetHeight;
+    const cover = ratio > ww / wh ? { w: wh * ratio, h: wh } : { w: ww, h: ww / ratio };
+    const t = (el.rotation * Math.PI) / 180;
+    let from = { x: e.clientX, y: e.clientY, panX: el.panX ?? 0.5, panY: el.panY ?? 0.5 };
+    let pinch: { dist: number; zoom: number } | null = null;
+    let moved = false;
+    const apply = (patch: Patch) => {
+      if (!moved) {
+        moved = true;
+        remember();
+      }
+      const p = pageRef.current;
+      setPage({ ...p, elements: p.elements.map((x) => (x.id === el.id ? ({ ...x, ...patch } as PageElement) : x)) });
+    };
+    const move = (ev: PointerEvent) => {
+      if (!pts.has(ev.pointerId)) return;
+      pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      const now = current();
+      if (!now) return;
+      if (pts.size >= 2) {
+        const [a, b] = [...pts.values()];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        pinch ??= { dist, zoom: now.zoom ?? 1 };
+        apply({ zoom: Math.round(clamp((pinch.zoom * dist) / Math.max(1, pinch.dist), 1, 4) * 100) / 100 });
+        return;
+      }
+      if (pinch) {
+        // back to one finger: carry on panning from here
+        pinch = null;
+        from = { x: ev.clientX, y: ev.clientY, panX: now.panX ?? 0.5, panY: now.panY ?? 0.5 };
+        return;
+      }
+      const s = scaleRef.current;
+      const dx = (ev.clientX - from.x) / s;
+      const dy = (ev.clientY - from.y) / s;
+      if (!moved && Math.hypot(dx, dy) < 3) return;
+      const zoom = clamp(now.zoom ?? 1, 1, 4);
+      const slackX = cover.w * zoom - ww;
+      const slackY = cover.h * zoom - wh;
+      // along the frame's own axes, so it feels the same when the frame is turned
+      const lx = dx * Math.cos(t) + dy * Math.sin(t);
+      const ly = -dx * Math.sin(t) + dy * Math.cos(t);
+      apply({
+        panX: slackX > 1 ? Math.round(clamp(from.panX - lx / slackX, 0, 1) * 1000) / 1000 : 0.5,
+        panY: slackY > 1 ? Math.round(clamp(from.panY - ly / slackY, 0, 1) * 1000) / 1000 : 0.5,
+      });
+    };
+    const end = (ev: PointerEvent) => {
+      pts.delete(ev.pointerId);
+      if (pts.size > 0) return;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      if (moved) savePage(pageRef.current);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
+  const pickFramePhoto = async (file: File | undefined) => {
+    const id = frameTarget.current;
+    if (frameInput.current) frameInput.current.value = '';
+    if (!file || !id) return;
+    setMessage('');
+    try {
+      const asset = await addImage(file);
+      patchEl(id, { assetId: asset.id, zoom: undefined, panX: undefined, panY: undefined });
+    } catch {
+      setMessage("That file couldn't be opened as a picture. Try a JPG or PNG.");
+    }
+  };
+  const openFramePicker = (id: string) => {
+    frameTarget.current = id;
+    frameInput.current?.click();
+  };
+
   const onKey = (e: React.KeyboardEvent, el: PageElement) => {
     // keys typed into a part's own fields are writing, not moving or removing
     if ((e.target as HTMLElement).closest('input, textarea')) return;
@@ -355,6 +459,10 @@ function PageEditor({ stored }: { stored: Page }) {
   useEffect(() => {
     if (!editing) setSelectedId(null);
   }, [editing]);
+  // positioning a photo ends when something else is selected
+  useEffect(() => {
+    setCroppingId((id) => (id && id === selectedId ? id : null));
+  }, [selectedId]);
 
   // Narrow screens: room under the page for the options panel, so the last parts can be reached.
   useEffect(() => {
@@ -384,17 +492,33 @@ function PageEditor({ stored }: { stored: Page }) {
     return () => cancelAnimationFrame(id);
   }, [editing, selectedId, panelPad]);
 
-  const pickPhoto = async (file: File | undefined, target: 'element' | 'background') => {
+  /** The Photo tool takes several pictures at once; each becomes its own photo on the page. */
+  const pickPhotos = async (files: FileList | null) => {
+    const list = Array.from(files ?? []);
+    if (!list.length) return;
+    setMessage('');
+    let failed = 0;
+    for (const file of list) {
+      try {
+        const asset = await addImage(file);
+        addEl(newPhoto(pageRef.current, asset.id, asset.w / asset.h));
+      } catch {
+        failed++;
+      }
+    }
+    if (failed) setMessage(list.length === 1 ? "That file couldn't be opened as a picture. Try a JPG or PNG." : `${failed} of ${list.length} files couldn't be opened as pictures. Try JPG or PNG.`);
+    if (photoInput.current) photoInput.current.value = '';
+  };
+
+  const pickBackground = async (file: File | undefined) => {
     if (!file) return;
     setMessage('');
     try {
       const asset = await addImage(file);
-      if (target === 'element') addEl(newPhoto(pageRef.current, asset.id, asset.w / asset.h));
-      else change((p) => ({ ...p, background: { ...p.background, assetId: asset.id } }));
+      change((p) => ({ ...p, background: { ...p.background, assetId: asset.id } }));
     } catch {
       setMessage("That file couldn't be opened as a picture. Try a JPG or PNG.");
     }
-    if (photoInput.current) photoInput.current.value = '';
     if (bgInput.current) bgInput.current.value = '';
   };
 
@@ -427,6 +551,9 @@ function PageEditor({ stored }: { stored: Page }) {
       </button>
       <button className="pe-tool" onClick={() => photoInput.current?.click()}>
         <span aria-hidden="true">📷</span>Photo
+      </button>
+      <button className="pe-tool" onClick={() => addEl(newFrame(pageRef.current))}>
+        <span aria-hidden="true">🖼️</span>Slot
       </button>
       <button className="pe-tool" onClick={() => setSheet('sticker')}>
         <span aria-hidden="true">🌸</span>Sticker
@@ -464,7 +591,8 @@ function PageEditor({ stored }: { stored: Page }) {
       <button className="pe-tool" onClick={undoLast} disabled={undoCount === 0}>
         <span aria-hidden="true">↩️</span>Undo
       </button>
-      <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => pickPhoto(e.target.files?.[0], 'element')} />
+      <input ref={photoInput} type="file" accept="image/*" multiple hidden onChange={(e) => void pickPhotos(e.target.files)} />
+      <input ref={frameInput} type="file" accept="image/*" hidden onChange={(e) => void pickFramePhoto(e.target.files?.[0])} />
     </div>
   );
 
@@ -542,6 +670,64 @@ function PageEditor({ stored }: { stored: Page }) {
                 Shadow
               </button>
             </div>
+          )}
+
+          {selected.type === 'frame' && (
+            <>
+              <div className="pe-row">
+                <button className="btn btn-small btn-primary" onClick={() => openFramePicker(selected.id)}>
+                  {selected.assetId ? 'Replace photo' : 'Add a photo'}
+                </button>
+                {selected.assetId && (
+                  <>
+                    <button className={`chip ${croppingId === selected.id ? 'is-on' : ''}`} aria-pressed={croppingId === selected.id} onClick={() => setCroppingId(croppingId === selected.id ? null : selected.id)}>
+                      Move photo in frame
+                    </button>
+                    <button
+                      className="btn btn-small btn-quiet"
+                      onClick={() => {
+                        setCroppingId(null);
+                        patchEl(selected.id, { assetId: undefined, zoom: undefined, panX: undefined, panY: undefined });
+                      }}
+                    >
+                      Remove photo
+                    </button>
+                  </>
+                )}
+              </div>
+              {selected.assetId && (
+                <>
+                  <label className="pe-slider">
+                    <span>Zoom</span>
+                    <input type="range" min={1} max={4} step={0.05} value={selected.zoom ?? 1} onChange={(e) => patchEl(selected.id, { zoom: Number(e.target.value) }, 'frame-zoom')} aria-label="Zoom the photo" />
+                  </label>
+                  {croppingId === selected.id ? (
+                    <p className="muted">Drag the photo to choose what shows. Pinch, scroll or use the slider to zoom.</p>
+                  ) : (
+                    ((selected.zoom ?? 1) !== 1 || (selected.panX ?? 0.5) !== 0.5 || (selected.panY ?? 0.5) !== 0.5) && (
+                      <button className="btn btn-quiet btn-small" onClick={() => patchEl(selected.id, { zoom: undefined, panX: undefined, panY: undefined })}>
+                        Centre the photo
+                      </button>
+                    )
+                  )}
+                </>
+              )}
+              <div className="pe-field">
+                <span>Frame</span>
+                <div className="seg seg-small seg-wrap" role="radiogroup" aria-label="Frame style">
+                  {FRAME_STYLES.map((f) => (
+                    <button key={f.id} role="radio" aria-checked={selected.style === f.id} className={selected.style === f.id ? 'is-on' : ''} onClick={() => patchEl(selected.id, { style: f.id })}>
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="pe-field">
+                <span>Caption</span>
+                <input type="text" value={selected.caption ?? ''} onChange={(e) => patchEl(selected.id, { caption: e.target.value || undefined }, 'caption')} placeholder="No caption" maxLength={60} />
+              </label>
+              {!selected.assetId && <p className="muted">An empty slot can also be filled with a tap after Done.</p>}
+            </>
           )}
 
           {selected.type === 'tape' && (
@@ -816,10 +1002,11 @@ function PageEditor({ stored }: { stored: Page }) {
               {page.elements.map((el) => {
                 const on = el.id === selectedId;
                 const typing = on && isWritable(el);
+                const cropping = on && el.type === 'frame' && croppingId === el.id && Boolean(el.assetId);
                 return (
                   <div
                     key={el.id}
-                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''} ${typing ? 'is-typing' : ''}`}
+                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''} ${typing ? 'is-typing' : ''} ${cropping ? 'is-cropping' : ''}`}
                     style={frameStyle(el)}
                     tabIndex={0}
                     role="button"
@@ -827,8 +1014,19 @@ function PageEditor({ stored }: { stored: Page }) {
                     onPointerDown={(e) => {
                       // in the selected part, pressing a field or button types or taps; elsewhere it drags
                       if (typing && (e.target as HTMLElement).closest('input, textarea, button')) return e.stopPropagation();
+                      if (cropping && el.type === 'frame') return beginPan(e, el);
                       begin(e, el, 'move');
                     }}
+                    onClick={() => {
+                      // a tap on an empty photo slot that was already selected opens the picker
+                      const press = lastPress.current;
+                      if (el.type === 'frame' && !el.assetId && press.id === el.id && press.wasSelected && !press.moved) openFramePicker(el.id);
+                    }}
+                    onWheel={
+                      cropping && el.type === 'frame'
+                        ? (e) => patchEl(el.id, { zoom: Math.round(clamp((el.zoom ?? 1) * (e.deltaY < 0 ? 1.08 : 1 / 1.08), 1, 4) * 100) / 100 }, 'frame-zoom')
+                        : undefined
+                    }
                     onFocus={(e) => e.target === e.currentTarget && setSelectedId(el.id)}
                     onKeyDown={(e) => onKey(e, el)}
                   >
@@ -1034,7 +1232,7 @@ function PageEditor({ stored }: { stored: Page }) {
                   Remove picture
                 </button>
               )}
-              <input ref={bgInput} type="file" accept="image/*" hidden onChange={(e) => pickPhoto(e.target.files?.[0], 'background')} />
+              <input ref={bgInput} type="file" accept="image/*" hidden onChange={(e) => void pickBackground(e.target.files?.[0])} />
             </div>
           </div>
         </Sheet>

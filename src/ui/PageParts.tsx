@@ -52,6 +52,10 @@ export function textVars(el: PartTextStyle): CSSProperties {
 
 const overflows = (el: HTMLElement) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
 
+/** Every fitted text on screen, measured again whenever a font finishes loading. */
+const refits = new Set<() => void>();
+if (typeof document !== 'undefined') document.fonts?.addEventListener?.('loadingdone', () => refits.forEach((fit) => fit()));
+
 /**
  * Text in a fixed-size spot (a day note, a table cell, a tile, a book spine).
  * If it fits, it is left alone, so it looks as it always has. If not, it
@@ -74,8 +78,11 @@ function Fit({ text, className, vertical = false }: { text: string | undefined; 
     fit();
     let live = true;
     void document.fonts?.ready.then(() => live && fit());
+    // a lettering that finishes loading later changes the widths: measure again then
+    refits.add(fit);
     return () => {
       live = false;
+      refits.delete(fit);
     };
   });
   return (

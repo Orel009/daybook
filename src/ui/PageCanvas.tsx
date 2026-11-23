@@ -1,9 +1,9 @@
-import { createContext, useContext, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useAssetUrl, type PhotoSource } from '../data/assets';
+import { addImage, useAssetUrl, type PhotoSource } from '../data/assets';
 import { useDayMap, useToday } from '../data/hooks';
 import { useStore, useUi } from '../data/store';
-import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type Page, type PageElement } from '../domain/pages';
+import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type FrameElement, type Page, type PageElement } from '../domain/pages';
 import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
 import { buildDayMap } from '../domain/stats';
 import { configFor, getVisualization } from '../visualizations';
@@ -40,6 +40,81 @@ function PhotoBody({ el }: { el: Extract<PageElement, { type: 'photo' }> }) {
   return (
     <div className={`pg-photo frame-${el.frame} ${el.shadow ? 'has-shadow' : ''}`}>
       {url ? <img src={url} alt="" draggable={false} /> : <span className="pg-photo-wait" />}
+    </div>
+  );
+}
+
+const CameraIcon = () => (
+  <svg className="pg-frame-icon" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M16 34h13l7-11h28l7 11h13a7 7 0 0 1 7 7v33a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7V41a7 7 0 0 1 7-7z" />
+    <circle cx="50" cy="56" r="15" />
+    <path d="M50 49v14M43 56h14" />
+  </svg>
+);
+
+/** How a frame's photo sits in its window: bigger than the window by `zoom`, shifted by the pan. */
+export function frameImageStyle(el: Pick<FrameElement, 'zoom' | 'panX' | 'panY'>): CSSProperties {
+  const zoom = Math.max(1, Math.min(4, el.zoom ?? 1));
+  const px = Math.max(0, Math.min(1, el.panX ?? 0.5));
+  const py = Math.max(0, Math.min(1, el.panY ?? 0.5));
+  return {
+    width: `${zoom * 100}%`,
+    height: `${zoom * 100}%`,
+    left: `${-(zoom - 1) * px * 100}%`,
+    top: `${-(zoom - 1) * py * 100}%`,
+    objectPosition: `${px * 100}% ${py * 100}%`,
+  };
+}
+
+/**
+ * A photo slot. Empty, a tap picks a photo (from the gallery or the camera)
+ * when the page is being viewed; replacing and positioning happen in Edit.
+ */
+function FrameBody({ el, mode, onChange }: { el: FrameElement; mode: PartMode; onChange?: PartChange }) {
+  const source = useContext(PageSourceContext);
+  const url = usePagePhoto(el.assetId);
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const canAdd = mode === 'view' && Boolean(onChange) && !source;
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const asset = await addImage(file);
+      onChange?.({ assetId: asset.id, zoom: undefined, panX: undefined, panY: undefined });
+    } catch {
+      setFailed(true);
+    }
+    setBusy(false);
+    if (input.current) input.current.value = '';
+  };
+  const invite = (
+    <>
+      <CameraIcon />
+      <span>{busy ? 'Adding…' : failed ? "That file isn't a picture. Tap to try another." : el.hint || (source ? 'No photo yet' : 'Tap to add a photo')}</span>
+    </>
+  );
+  return (
+    <div className={`pg-frame frame-${el.style} ${el.assetId ? 'has-photo' : 'is-empty'} ${el.caption ? 'has-caption' : ''}`}>
+      <div className="pg-frame-window">
+        {el.assetId ? (
+          url ? (
+            <img src={url} alt={el.caption || ''} draggable={false} style={frameImageStyle(el)} />
+          ) : (
+            <span className="pg-photo-wait" />
+          )
+        ) : canAdd ? (
+          <button type="button" className="pg-frame-add" onClick={() => input.current?.click()} disabled={busy} aria-label={el.hint ? `${el.hint}: add a photo` : 'Add a photo'}>
+            {invite}
+          </button>
+        ) : (
+          <div className="pg-frame-add">{invite}</div>
+        )}
+      </div>
+      {el.caption && <div className="pg-frame-caption">{el.caption}</div>}
+      {canAdd && <input ref={input} type="file" accept="image/*" hidden onChange={(e) => void pick(e.target.files?.[0])} />}
     </div>
   );
 }
@@ -155,6 +230,8 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
       );
     case 'tape':
       return <div className={`pg-tape tape-${el.pattern} edge-${el.edge ?? 'torn'} ${el.sheer ? 'is-sheer' : ''}`} style={{ backgroundColor: TAPE_COLORS[el.color] }} />;
+    case 'frame':
+      return <FrameBody el={el} mode={mode} onChange={onChange} />;
     case 'tracker':
       return <TrackerBody trackerId={el.trackerId} live={live} look={el.look} full={el.full} />;
     case 'bookshelf':

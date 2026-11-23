@@ -6,6 +6,7 @@ import {
   type BookshelfElement,
   type BoxElement,
   type ChecklistElement,
+  type FrameElement,
   type GridElement,
   type MonthElement,
   type Page,
@@ -98,6 +99,10 @@ const write = (x: number, y: number, w: number, h: number, heading: string, colo
 const box = (x: number, y: number, w: number, h: number, heading: string, rotation = 0): BoxElement => ({
   id: newId(), type: 'box', x, y, w, h, rotation, fill: 'white', border: 'dashed', title: heading,
 });
+/** A photo slot: tap it to add a photo. */
+const frame = (x: number, y: number, w: number, h: number, rotation = 0, o: Partial<FrameElement> = {}): FrameElement => ({
+  id: newId(), type: 'frame', x, y, w, h, rotation, style: 'plain', ...o,
+});
 const month = (x: number, y: number, w: number, h: number, color: string, d: Date): MonthElement => ({
   id: newId(), type: 'month', x, y, w, h, rotation: 0, color, year: d.getFullYear(), month: d.getMonth(), notes: {},
 });
@@ -144,14 +149,14 @@ const tiles = (x: number, y: number, w: number, h: number, heading: string, colo
   tiles: typeof labels === 'number' ? Array.from({ length: labels }, () => ({})) : labels.map((label) => (label ? { label } : {})),
   ...o,
 });
-/** A dashed photo spot held by a strip of tape. */
-const photoSpot = (x: number, y: number, w: number, h: number, rotation: number, color: string, pattern: TapePattern, label = 'A photo goes here'): PageElement[] => [
-  box(x, y, w, h, label, rotation),
+/** A photo slot held by a strip of tape. */
+const photoSpot = (x: number, y: number, w: number, h: number, rotation: number, color: string, pattern: TapePattern, o: Partial<FrameElement> = {}): PageElement[] => [
+  frame(x, y, w, h, rotation, o),
   tape(x + w / 2 - 70, y - 18, 140, color, pattern, -rotation),
 ];
 
 /** The layout helpers, for templates kept in other files (more.ts). */
-const kit = { title, sub, list, table, write, box, month, tape, art, track, shelf, tiles, photoSpot, blank, paper, weekDays, shortDays, monthName, longDate, INK, SOFT };
+const kit = { title, sub, list, table, write, box, frame, month, tape, art, track, shelf, tiles, photoSpot, blank, paper, weekDays, shortDays, monthName, longDate, INK, SOFT };
 export type TemplateKit = typeof kit;
 
 const CORE_TEMPLATES: BuiltInTemplate[] = [
@@ -418,8 +423,8 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
       elements: [
         title(60, 56, 760, 'A day to remember'),
         sub(62, 160, 600, longDate(ctx.today)),
-        box(64, 236, 430, 330, 'A photo goes here', -2),
-        box(520, 290, 320, 270, 'And another', 3),
+        frame(64, 236, 430, 330, -2),
+        frame(520, 290, 320, 270, 3),
         tape(190, 214, 170, 'rose', 'dots', -4),
         tape(610, 268, 150, 'mint', 'stripes', 5),
         art(760, 180, 90, 'sparkle', 'butter'),
@@ -550,7 +555,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         title(60, 50, 760, 'Recipe'),
         tape(620, 76, 220, 'peach', 'gingham', 4),
         write(60, 190, 780, 104, 'Name', 'peach', false),
-        box(60, 316, 380, 300, 'A photo goes here', -2),
+        frame(60, 316, 380, 300, -2),
         write(60, 640, 380, 140, 'Serves and time', 'butter', false),
         list(460, 316, 380, 'Ingredients', 'mint', 6),
         write(60, 800, 780, 350, 'Method', 'sky'),
@@ -725,7 +730,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         write(60, 196, 500, 104, 'Title', 'rose', false),
         write(60, 318, 500, 104, 'Author', 'butter', false),
         table(60, 440, 500, 100, '', 'mint', ['Started', 'Finished', 'Stars'], blank(1)),
-        box(590, 196, 250, 344, 'The cover', 2),
+        frame(590, 196, 250, 344, 2, { hint: 'The cover' }),
         tape(650, 176, 130, 'sky', 'dots', -4),
         write(60, 562, 780, 250, 'What it’s about', 'sky'),
         write(60, 832, 380, 318, 'Favourite quote', 'lilac'),
@@ -821,10 +826,10 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
       background: paper(7, 'plain'),
       elements: [
         title(60, 50, 760, 'Moments'),
-        box(70, 210, 360, 330, 'A photo goes here', -4),
-        box(470, 230, 360, 300, 'And here', 3),
-        box(90, 580, 340, 320, 'And here', 2),
-        box(460, 570, 370, 340, 'One more', -3),
+        frame(70, 210, 360, 330, -4),
+        frame(470, 230, 360, 300, 3),
+        frame(90, 580, 340, 320, 2),
+        frame(460, 570, 370, 340, -3),
         tape(170, 190, 160, 'rose', 'hearts', -6),
         tape(580, 212, 150, 'butter', 'stripes', 5),
         tape(180, 562, 150, 'mint', 'dots', 4),
@@ -845,8 +850,8 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         title(60, 50, 700, 'Trip journal'),
         art(726, 40, 124, 'mountain', 'lilac'),
         table(60, 196, 780, 100, '', 'sky', ['Where', 'When', 'With'], blank(1)),
-        box(64, 322, 380, 300, 'A photo goes here', -2),
-        box(462, 330, 376, 290, 'And another', 2),
+        frame(64, 322, 380, 300, -2),
+        frame(462, 330, 376, 290, 2),
         tape(190, 304, 150, 'peach', 'triangles', -4),
         list(60, 650, 380, 'Highlights', 'rose', 4),
         write(460, 650, 380, 320, 'Best meal', 'butter'),
@@ -1332,7 +1337,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         elements: [
           title(50, 26, 700, 'Vision board'),
           art(1060, 20, 90, 'sparkle', 'butter'),
-          ...spots.flatMap(([x, y, name, rot, color, pattern]) => [box(x, y, 340, 300, name, rot), tape(x + 110, y - 18, 130, color, pattern, rot * -2)]),
+          ...spots.flatMap(([x, y, name, rot, color, pattern]) => [frame(x, y, 340, 300, rot, { caption: name }), tape(x + 110, y - 18, 130, color, pattern, rot * -2)]),
         ],
       };
     },
@@ -1440,7 +1445,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         background: paper(0, 'plain'),
         elements: [
           title(50, 26, 700, 'Favourite pictures'),
-          ...spots.flatMap(([x, y, rot, color, pattern]) => [box(x, y, 330, 300, 'A photo goes here', rot), tape(x + 100, y - 18, 130, color, pattern, -rot)]),
+          ...spots.flatMap(([x, y, rot, color, pattern]) => [frame(x, y, 330, 300, rot), tape(x + 100, y - 18, 130, color, pattern, -rot)]),
         ],
       };
     },
@@ -1475,7 +1480,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
         title(60, 50, 640, 'Happy birthday'),
         art(730, 40, 110, 'gift', 'rose', 6),
         art(680, 120, 56, 'sparkle', 'butter'),
-        box(64, 206, 410, 360, 'A photo goes here', -2),
+        frame(64, 206, 410, 360, -2),
         tape(190, 186, 150, 'butter', 'confetti', -4),
         write(500, 200, 340, 176, 'Who celebrated', 'butter'),
         write(500, 394, 340, 176, 'Best moment', 'mint'),

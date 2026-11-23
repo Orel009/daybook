@@ -77,6 +77,31 @@ export interface StickerElement extends ElementBase {
   assetId?: string; // "My stickers"
 }
 
+// A photo slot. Empty, it invites a photo ("Tap to add a photo"); filled, it
+// shows the photo cropped to the slot. `zoom`, `panX` and `panY` say which part
+// of the photo shows: zoom 1 fills the slot, pan 0.5 is centred.
+export const FRAME_STYLES = [
+  { id: 'plain', name: 'Plain' },
+  { id: 'polaroid', name: 'Polaroid' },
+  { id: 'rounded', name: 'Rounded' },
+  { id: 'circle', name: 'Circle' },
+  { id: 'torn', name: 'Torn paper' },
+  { id: 'stamp', name: 'Stamp edge' },
+] as const;
+export type FrameStyle = (typeof FRAME_STYLES)[number]['id'];
+
+export interface FrameElement extends ElementBase {
+  type: 'frame';
+  assetId?: string;
+  style: FrameStyle;
+  zoom?: number; // 1–4
+  panX?: number; // 0–1
+  panY?: number; // 0–1
+  caption?: string;
+  /** Shown on the empty slot instead of "Tap to add a photo" (e.g. "The cover"). */
+  hint?: string;
+}
+
 export const TAPE_PATTERNS = [
   { id: 'stripes', name: 'Stripes' },
   { id: 'diagonal', name: 'Diagonal stripes' },
@@ -229,6 +254,7 @@ export interface GridElement extends ElementBase, PartTextStyle {
 }
 
 export type PageElement =
+  | FrameElement
   | GridElement
   | BookshelfElement
   | TextElement
@@ -244,7 +270,7 @@ export type PageElement =
 
 /** Parts that respond to taps when the page is being viewed. */
 export const isFillable = (el: PageElement): boolean =>
-  el.type === 'tracker' || isWritable(el);
+  el.type === 'tracker' || isWritable(el) || (el.type === 'frame' && !el.assetId);
 
 /** Parts that are written in (in Edit, while selected). */
 export const isWritable = (el: PageElement): boolean =>
@@ -334,6 +360,12 @@ export const newText = (page: Page): TextElement => ({
   color: isDarkColor(page.background.color) ? '#FFFFFF' : '#3A2B47',
   align: 'left',
 });
+
+export const newFrame = (page: Page, style: FrameStyle = 'polaroid'): FrameElement => {
+  const w = style === 'circle' ? 320 : 360;
+  const h = style === 'circle' ? 320 : style === 'polaroid' ? 400 : 300;
+  return { id: newId(), type: 'frame', ...place(page.size, w, h, page.elements.length), w, h, rotation: style === 'polaroid' ? -3 : 0, style };
+};
 
 export const newPhoto = (page: Page, assetId: string, ratio: number): PhotoElement => {
   const w = ratio >= 1 ? 440 : 340;
@@ -529,7 +561,7 @@ export const copyPage = (source: Page, title: string, sortOrder: number, isTempl
 });
 
 export const assetIdsOf = (page: Page): string[] => {
-  const ids = page.elements.flatMap((e) => (e.type === 'photo' ? [e.assetId] : e.type === 'sticker' && e.assetId ? [e.assetId] : []));
+  const ids = page.elements.flatMap((e) => (e.type === 'photo' ? [e.assetId] : (e.type === 'sticker' || e.type === 'frame') && e.assetId ? [e.assetId] : []));
   if (page.background.assetId) ids.push(page.background.assetId);
   return ids;
 };

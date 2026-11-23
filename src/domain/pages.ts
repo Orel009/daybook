@@ -209,6 +209,8 @@ export interface WritingElement extends ElementBase, PartTextStyle {
   color: string;
   text: string;
   lined: boolean;
+  /** Without the panel around it: only the lines and the writing, for writing inside a shape. */
+  bare?: boolean;
 }
 
 export interface MonthElement extends ElementBase, PartTextStyle {
@@ -291,7 +293,50 @@ export interface GridElement extends ElementBase, PartTextStyle {
   inOrder?: boolean;
 }
 
+// A hand-drawn line or arrow between two points. `x`, `y`, `w` and `h` are the
+// box around it, like every part; the two ends (and, for a curved line, the
+// point it passes through halfway) are measured from that box's corner, so
+// moving the line changes only `x` and `y`. The geometry is in domain/line.ts.
+export interface LineElement extends ElementBase {
+  type: 'line';
+  ax: number;
+  ay: number;
+  bx: number;
+  by: number;
+  /** Curved lines only: the point the line passes through halfway. */
+  mx?: number;
+  my?: number;
+  color: string; // hex
+  weight: number;
+  dash?: 'dashed' | 'dotted';
+  /** An arrowhead at the second end, or at both. */
+  arrow?: 'end' | 'both';
+}
+
+export const SHAPES = [
+  { id: 'circle', name: 'Circle' },
+  { id: 'ellipse', name: 'Ellipse' },
+  { id: 'rounded', name: 'Rounded square' },
+  { id: 'cloud', name: 'Cloud' },
+  { id: 'heart', name: 'Heart' },
+  { id: 'speech', name: 'Speech bubble' },
+] as const;
+export type ShapeKind = (typeof SHAPES)[number]['id'];
+
+/** An outline to put around or behind other parts. The outlines are in domain/shapes.ts. */
+export interface ShapeElement extends ElementBase {
+  type: 'shape';
+  shape: ShapeKind;
+  color: string; // hex: the outline
+  /** Filled with a soft tint of the colour; otherwise only the outline. */
+  fill?: boolean;
+  dashed?: boolean;
+  weight?: number; // outline thickness, 4 when unset
+}
+
 export type PageElement =
+  | LineElement
+  | ShapeElement
   | FrameElement
   | GridElement
   | BookshelfElement
@@ -510,6 +555,30 @@ export const newBox = (page: Page): BoxElement => ({
   border: 'solid',
   title: '',
 });
+
+const inkFor = (page: Page) => (isDarkColor(page.background.color) ? '#FFFFFF' : '#3A2B47');
+
+export const newLine = (page: Page): LineElement => ({
+  id: newId(),
+  type: 'line',
+  ...place(page.size, 320, 0, page.elements.length),
+  w: 320,
+  h: 0,
+  rotation: 0,
+  ax: 0,
+  ay: 0,
+  bx: 320,
+  by: 0,
+  color: inkFor(page),
+  weight: 5,
+});
+
+const SHAPE_SIZES: Record<ShapeKind, [number, number]> = { circle: [300, 300], ellipse: [380, 260], rounded: [300, 300], cloud: [380, 260], heart: [300, 280], speech: [380, 280] };
+
+export const newShape = (page: Page, shape: ShapeKind): ShapeElement => {
+  const [w, h] = SHAPE_SIZES[shape];
+  return { id: newId(), type: 'shape', ...place(page.size, w, h, page.elements.length), w, h, rotation: 0, shape, color: inkFor(page) };
+};
 
 export const newChecklist = (page: Page): ChecklistElement => ({
   id: newId(),

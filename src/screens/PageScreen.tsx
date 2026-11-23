@@ -22,12 +22,15 @@ import {
   TILE_LAYOUTS,
   TILE_SHAPES,
   type FrameElement,
+  type LineElement,
   type PartTextStyle,
   newCustomSticker,
   newDrawnSticker,
   newItem,
+  newLine,
   newMonth,
   newPhoto,
+  newShape,
   newTable,
   newWriting,
   newSticker,
@@ -36,6 +39,7 @@ import {
   newTrackerElement,
   PAGE_DIMS,
   PATTERNS,
+  SHAPES,
   STICKER_SETS,
   TAPE_EDGES,
   TEXT_FONTS,
@@ -55,6 +59,9 @@ import { pageTrackerIds } from '../data/shareRules';
 import { backPreset, COVER_PRESETS, coverPreset, SPINE_COLORS } from '../domain/covers';
 import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
 import { scrollerOf, themeAccent } from '../ui/dom';
+import { bendLine, flipLine, isCurved, linePoints, middle, moveLinePoint, straightenLine, type Pt } from '../domain/line';
+import { shapeWeight } from '../domain/shapes';
+import { ShapeOutline } from '../ui/PageDrawing';
 
 type Mode = 'move' | 'resize' | 'width' | 'rotate';
 type Patch = Record<string, unknown>;
@@ -68,6 +75,8 @@ const TYPE_NAMES: Record<PageElement['type'], string> = {
   tape: 'Tape',
   tracker: 'Tracker',
   box: 'Box',
+  line: 'Line',
+  shape: 'Shape',
   checklist: 'Checklist',
   table: 'Table',
   writing: 'Writing area',
@@ -107,6 +116,14 @@ function applyGesture(start: PageElement, h0: number, mode: Mode, dx: number, dy
   } else if (start.type === 'tape') {
     w = Math.max(40, start.w + lx);
     h = Math.max(16, h0 + ly);
+  } else if (start.type === 'shape' && start.shape === 'circle') {
+    // a circle stays round
+    const s = Math.max(40 / start.w, (start.w + lx) / start.w, (h0 + ly) / h0);
+    w = start.w * s;
+    h = h0 * s;
+  } else if (start.type === 'shape') {
+    w = Math.max(40, start.w + lx);
+    h = Math.max(40, h0 + ly);
   } else if (start.type === 'box' || start.type === 'table' || start.type === 'writing' || start.type === 'month' || start.type === 'bookshelf' || start.type === 'tiles' || start.type === 'frame') {
     w = Math.max(120, start.w + lx);
     h = Math.max(80, h0 + ly);
@@ -176,6 +193,9 @@ function TextStyleFields({ el, onPatch }: { el: PartTextStyle; onPatch: (patch: 
   );
 }
 
+/** Where a line's handle sits: centred on a point measured from the line's own box. */
+const handleAt = (p: Pt) => ({ left: `calc(${p.x}px - var(--hs) / 2)`, top: `calc(${p.y}px - var(--hs) / 2)` });
+
 const COVER_COLORS: [string, string][] = ['#F3A3BA', '#F8C19B', '#F6DB7D', '#A9DFC4', '#A8CDF2', '#C9B6F0', '#E9E1D3', '#CFAE86', '#6B4A3A', '#262B4A'].map((c) => [c, c]);
 const SPINE_LIST: [string, string][] = SPINE_COLORS.map((c) => [c, c]);
 const BASIC_TAPES = new Set<string>(TAPE_PATTERNS.map((t) => t.id));
@@ -215,7 +235,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const propsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
-  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover'>(null);
+  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover' | 'shape'>(null);
   const isCover = Boolean(stored.role);
   const pageCount = useStore((st) => bookOrder(st.pages).length);
   // photo slots: which one the picker is filling, and which one's photo is being positioned
@@ -311,6 +331,14 @@ function PageEditor({ stored }: { stored: Page }) {
       list.splice(j, 0, el);
       return { ...p, elements: list };
     });
+  /** All the way behind everything else, or in front of it. */
+  const toEdge = (id: string, edge: 'back' | 'front') =>
+    change((p) => {
+      const el = p.elements.find((e) => e.id === id);
+      if (!el) return p;
+      const rest = p.elements.filter((e) => e.id !== id);
+      return { ...p, elements: edge === 'back' ? [el, ...rest] : [...rest, el] };
+    });
   const duplicateEl = (el: PageElement) => addEl({ ...el, id: newId(), x: el.x + 36, y: el.y + 36 });
 
   // ----- gestures
@@ -338,6 +366,44 @@ function PageEditor({ stored }: { stored: Page }) {
         patch.x = clamp(patch.x as number, -el.w / 2, d.w - el.w / 2);
         patch.y = clamp(patch.y as number, -g.h0 / 2, d.h - g.h0 / 2);
       }
+      const p = pageRef.current;
+      setPage({ ...p, elements: p.elements.map((x) => (x.id === el.id ? ({ ...x, ...patch } as PageElement) : x)) });
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      if (g.moved) savePage(pageRef.current);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
+  // ----- lines: drag an end to move it, or the middle to bend the line
+  const beginPoint = (e: React.PointerEvent, el: LineElement, which: 'a' | 'b' | 'mid') => {
+    e.stopPropagation();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const l = linePoints(el);
+    const from = which === 'mid' ? middle(l) : l[which];
+    const other = which === 'a' ? l.b : l.a;
+    const g = { sx: e.clientX, sy: e.clientY, moved: false };
+    const move = (ev: PointerEvent) => {
+      if (!g.moved) {
+        if (Math.hypot(ev.clientX - g.sx, ev.clientY - g.sy) < 4) return;
+        g.moved = true;
+        remember();
+      }
+      const s = scaleRef.current;
+      const d = PAGE_DIMS[pageRef.current.size];
+      // the handle follows the finger, and stays on the sheet
+      const to = { x: clamp(from.x + (ev.clientX - g.sx) / s, 0, d.w), y: clamp(from.y + (ev.clientY - g.sy) / s, 0, d.h) };
+      if (which !== 'mid' && !l.mid) {
+        // nearly level or upright: make it exactly so
+        if (Math.abs(to.y - other.y) <= 6) to.y = other.y;
+        if (Math.abs(to.x - other.x) <= 6) to.x = other.x;
+      }
+      const patch = moveLinePoint(el, which, to);
       const p = pageRef.current;
       setPage({ ...p, elements: p.elements.map((x) => (x.id === el.id ? ({ ...x, ...patch } as PageElement) : x)) });
     };
@@ -610,6 +676,12 @@ function PageEditor({ stored }: { stored: Page }) {
       </button>
       <button className="pe-tool" onClick={() => addEl(newBox(pageRef.current))}>
         <span aria-hidden="true">⬜</span>Box
+      </button>
+      <button className="pe-tool" onClick={() => addEl(newLine(pageRef.current))}>
+        <span aria-hidden="true">↗️</span>Line
+      </button>
+      <button className="pe-tool" onClick={() => setSheet('shape')}>
+        <span aria-hidden="true">⭕</span>Shape
       </button>
       <button className="pe-tool" onClick={() => setSheet('background')}>
         <span aria-hidden="true">🎨</span>Paper
@@ -897,9 +969,106 @@ function PageEditor({ stored }: { stored: Page }) {
           )}
 
           {selected.type === 'writing' && (
-            <button className={`chip ${selected.lined ? 'is-on' : ''}`} aria-pressed={selected.lined} onClick={() => patchEl(selected.id, { lined: !selected.lined })}>
-              Ruled lines
-            </button>
+            <div className="pe-row">
+              <button className={`chip ${selected.lined ? 'is-on' : ''}`} aria-pressed={selected.lined} onClick={() => patchEl(selected.id, { lined: !selected.lined })}>
+                Ruled lines
+              </button>
+              <button className={`chip ${selected.bare ? '' : 'is-on'}`} aria-pressed={!selected.bare} onClick={() => patchEl(selected.id, { bare: selected.bare ? undefined : true })}>
+                Panel
+              </button>
+            </div>
+          )}
+
+          {selected.type === 'line' && (
+            <>
+              <div className="pe-row">
+                <div className="seg seg-small" role="radiogroup" aria-label="Straight or curved">
+                  <button role="radio" aria-checked={!isCurved(selected)} className={!isCurved(selected) ? 'is-on' : ''} onClick={() => isCurved(selected) && patchEl(selected.id, straightenLine(selected))}>
+                    Straight
+                  </button>
+                  <button role="radio" aria-checked={isCurved(selected)} className={isCurved(selected) ? 'is-on' : ''} onClick={() => !isCurved(selected) && patchEl(selected.id, bendLine(selected))}>
+                    Curved
+                  </button>
+                </div>
+                <div className="seg seg-small" role="radiogroup" aria-label="Line style">
+                  {([[undefined, 'Solid'], ['dashed', 'Dashed'], ['dotted', 'Dotted']] as const).map(([f, name]) => (
+                    <button key={name} role="radio" aria-checked={selected.dash === f} className={selected.dash === f ? 'is-on' : ''} onClick={() => patchEl(selected.id, { dash: f })}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="pe-field">
+                <span>Arrowhead</span>
+                <div className="pe-row">
+                  <div className="seg seg-small" role="radiogroup" aria-label="Arrowhead">
+                    {([[undefined, 'None'], ['end', 'One end'], ['both', 'Both ends']] as const).map(([f, name]) => (
+                      <button key={name} role="radio" aria-checked={selected.arrow === f} className={selected.arrow === f ? 'is-on' : ''} onClick={() => patchEl(selected.id, { arrow: f })}>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  {selected.arrow === 'end' && (
+                    <button className="btn btn-quiet btn-small" onClick={() => patchEl(selected.id, flipLine(selected))}>
+                      Other end
+                    </button>
+                  )}
+                </div>
+              </div>
+              <label className="pe-slider">
+                <span>Thickness: {selected.weight}</span>
+                <input type="range" min={2} max={16} value={selected.weight} onChange={(e) => patchEl(selected.id, { weight: Number(e.target.value) }, 'line-weight')} aria-label="Line thickness" />
+              </label>
+              <div className="pe-field">
+                <span>Colour</span>
+                <Swatches colors={TEXT_LIST} value={selected.color} label="Line colour" onPick={(c) => c && patchEl(selected.id, { color: c })} />
+              </div>
+              <p className="muted">Drag the round ends to where the line starts and stops. Drag the yellow handle in the middle to bend it.</p>
+            </>
+          )}
+
+          {selected.type === 'shape' && (
+            <>
+              <div className="pe-field">
+                <span>Shape</span>
+                <div className="seg seg-small seg-wrap" role="radiogroup" aria-label="Shape">
+                  {SHAPES.map((f) => (
+                    <button key={f.id} role="radio" aria-checked={selected.shape === f.id} className={selected.shape === f.id ? 'is-on' : ''} onClick={() => patchEl(selected.id, { shape: f.id })}>
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="pe-row">
+                <div className="seg seg-small" role="radiogroup" aria-label="Outline">
+                  {([[false, 'Solid line'], [true, 'Dashed']] as const).map(([f, name]) => (
+                    <button key={name} role="radio" aria-checked={!!selected.dashed === f} className={!!selected.dashed === f ? 'is-on' : ''} onClick={() => patchEl(selected.id, { dashed: f || undefined })}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                <button className={`chip ${selected.fill ? 'is-on' : ''}`} aria-pressed={!!selected.fill} onClick={() => patchEl(selected.id, { fill: selected.fill ? undefined : true })}>
+                  Soft fill
+                </button>
+              </div>
+              <label className="pe-slider">
+                <span>Thickness: {shapeWeight(selected)}</span>
+                <input type="range" min={2} max={14} value={shapeWeight(selected)} onChange={(e) => patchEl(selected.id, { weight: Number(e.target.value) }, 'shape-weight')} aria-label="Outline thickness" />
+              </label>
+              <div className="pe-field">
+                <span>Colour</span>
+                <Swatches colors={TEXT_LIST} value={selected.color} label="Outline colour" onPick={(c) => c && patchEl(selected.id, { color: c })} />
+              </div>
+              <div className="pe-row">
+                <button className="btn btn-small" onClick={() => toEdge(selected.id, 'back')} disabled={page.elements[0].id === selected.id}>
+                  Behind everything
+                </button>
+                <button className="btn btn-small" onClick={() => toEdge(selected.id, 'front')} disabled={page.elements[page.elements.length - 1].id === selected.id}>
+                  In front of everything
+                </button>
+              </div>
+              <p className="muted">To write inside a shape, put it behind everything, then add text or lines to write on over it.</p>
+            </>
           )}
 
           {selected.type === 'month' && (
@@ -1164,7 +1333,14 @@ function PageEditor({ stored }: { stored: Page }) {
                     <div className="pg-el-body">
                       <ElementBody el={el} live={false} editing={typing} onChange={typing ? (patch) => patchEl(el.id, patch, `fill-${el.id}`) : undefined} />
                     </div>
-                    {on && (
+                    {on && el.type === 'line' && (
+                      <>
+                        <span className="handle handle-point" data-handle="a" style={handleAt(linePoints(el, true).a)} onPointerDown={(e) => beginPoint(e, el, 'a')} aria-hidden="true" />
+                        <span className="handle handle-point" data-handle="b" style={handleAt(linePoints(el, true).b)} onPointerDown={(e) => beginPoint(e, el, 'b')} aria-hidden="true" />
+                        <span className="handle handle-bend" data-handle="mid" style={handleAt(middle(linePoints(el, true)))} onPointerDown={(e) => beginPoint(e, el, 'mid')} aria-hidden="true" />
+                      </>
+                    )}
+                    {on && el.type !== 'line' && (
                       <>
                         {typing && (
                           <span className="handle handle-move" onPointerDown={(e) => begin(e, el, 'move')} aria-hidden="true">
@@ -1467,6 +1643,26 @@ function PageEditor({ stored }: { stored: Page }) {
               {isCover ? 'Go back to the standard cover' : `Delete this ${page.isTemplate ? 'template' : 'page'}`}
             </button>
           </div>
+        </Sheet>
+      )}
+
+      {sheet === 'shape' && (
+        <Sheet title="Add a shape" onClose={() => setSheet(null)}>
+          <div className="shape-picker">
+            {SHAPES.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => {
+                  addEl(newShape(pageRef.current, f.id));
+                  setSheet(null);
+                }}
+              >
+                <ShapeOutline shape={f.id} w={f.id === 'circle' || f.id === 'rounded' ? 84 : 110} h={84} color="#3A2B47" weight={4} />
+                {f.name}
+              </button>
+            ))}
+          </div>
+          <p className="muted">Change its colour, fill it softly or put it behind the rest once it is on the page.</p>
         </Sheet>
       )}
 

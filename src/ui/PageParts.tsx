@@ -230,7 +230,7 @@ export function TableBody({ el, mode, onChange }: PartProps<TableElement>) {
 
 export function WritingBody({ el, mode, onChange }: PartProps<WritingElement>) {
   return (
-    <div className="pp-panel pp-writing" style={textVars(el)}>
+    <div className={`pp-panel pp-writing${el.bare ? ' is-bare' : ''}`} style={textVars(el)}>
       <Head title={el.title} color={el.color} />
       {mode === 'edit' ? (
         <textarea

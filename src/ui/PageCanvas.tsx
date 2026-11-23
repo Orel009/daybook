@@ -9,6 +9,7 @@ import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domai
 import { buildDayMap } from '../domain/stats';
 import { configFor, getVisualization } from '../visualizations';
 import { DrawnStickerArt } from '../stickers/drawn';
+import { LineBody, ShapeBody } from './PageDrawing';
 import { BookshelfBody, BoxBody, ChecklistBody, GridBody, MonthBody, TableBody, WritingBody, type PartChange, type PartMode } from './PageParts';
 import { QuickLog } from './QuickLog';
 
@@ -252,6 +253,10 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
       return <BookshelfBody el={el} mode={mode} onChange={onChange} />;
     case 'box':
       return <BoxBody el={el} />;
+    case 'line':
+      return <LineBody el={el} />;
+    case 'shape':
+      return <ShapeBody el={el} />;
     case 'checklist':
       return <ChecklistBody el={el} mode={mode} onChange={onChange} />;
     case 'table':

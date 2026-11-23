@@ -1336,3 +1336,6 @@ button.pp-seg { cursor: pointer; }
    above gives every element a 0.01ms transition, so the old size was still in effect while
    measuring and the fit flipped on every redraw. These texts never animate. */
 .pg-layer .pp-panel :is(.pp-note, .pp-cell, .pp-tile-text, .pp-spine) { transition: none !important; }
+
+/* a template thumbnail that hasn't been drawn yet: an empty sheet of the same size */
+.pg.is-waiting { background: var(--raised); }

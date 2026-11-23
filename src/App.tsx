@@ -12,6 +12,7 @@ import { TrackerFormRoute } from './screens/TrackerForm';
 import { Journal, Templates } from './screens/Journal';
 import { PageScreen } from './screens/PageScreen';
 import { Book } from './screens/Book';
+import { Arrange } from './screens/Arrange';
 import { Settings } from './screens/Settings';
 import { SharedBookScreen, SharedPageScreen, SharedTrackerScreen } from './screens/Shared';
 
@@ -51,6 +52,7 @@ export function App() {
           <Route path="journal" element={<Journal />} />
           <Route path="journal/:id" element={<PageScreen />} />
           <Route path="book" element={<Book />} />
+          <Route path="arrange" element={<Arrange />} />
           <Route path="templates" element={<Templates />} />
           <Route path="settings" element={<Settings />} />
           <Route path="shared/:owner/page/:id" element={<SharedPageScreen />} />

@@ -23,6 +23,7 @@ import {
 } from '../domain/pages';
 import { newId } from '../domain/types';
 import { moreTemplates } from './more';
+import { dividerTemplates } from './dividers';
 
 // Ready-made pages. A template is a function that lays out ordinary page
 // elements, so everything it makes can be moved, restyled or removed in the
@@ -44,7 +45,7 @@ export interface TemplateContext {
 export const TEMPLATE_SUBJECTS = [
   'Planning', 'Food', 'Mood', 'Sleep', 'Sports and fitness', 'Water', 'Books', 'Goals', 'Gratitude', 'Memories', 'Money', 'Habits',
   'Bucket lists', 'Yearly bingo', 'Birthdays', 'Alphabet challenge', 'Book bingo', 'Movie challenge', 'Series', 'Dreams',
-  'Weather', 'Temperature', 'Self-care', 'Travel', 'Home', 'Family', 'Holidays',
+  'Weather', 'Temperature', 'Self-care', 'Travel', 'Home', 'Family', 'Holidays', 'Dividers',
 ] as const;
 export type TemplateSubject = (typeof TEMPLATE_SUBJECTS)[number];
 
@@ -52,7 +53,7 @@ export type TemplateSubject = (typeof TEMPLATE_SUBJECTS)[number];
 export const TEMPLATE_GROUPS: { name: string; subjects: TemplateSubject[] }[] = [
   { name: 'Plan', subjects: ['Planning', 'Goals', 'Money', 'Travel', 'Home', 'Family', 'Holidays'] },
   { name: 'Track', subjects: ['Habits', 'Mood', 'Sleep', 'Dreams', 'Water', 'Food', 'Sports and fitness', 'Self-care', 'Weather', 'Temperature', 'Series'] },
-  { name: 'Journal', subjects: ['Gratitude', 'Memories', 'Birthdays', 'Books'] },
+  { name: 'Journal', subjects: ['Gratitude', 'Memories', 'Birthdays', 'Books', 'Dividers'] },
   { name: 'Challenges', subjects: ['Yearly bingo', 'Book bingo', 'Alphabet challenge', 'Movie challenge'] },
   { name: 'Lists', subjects: ['Bucket lists'] },
 ];
@@ -1608,7 +1609,7 @@ const CORE_TEMPLATES: BuiltInTemplate[] = [
   },
 ];
 
-export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [...CORE_TEMPLATES, ...moreTemplates(kit)];
+export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [...CORE_TEMPLATES, ...moreTemplates(kit), ...dividerTemplates(kit)];
 
 /** A complete page from a template. Use `createPage(…, from: thisPage)` to save it. */
 export function buildTemplatePage(t: BuiltInTemplate, ctx: TemplateContext): Page {

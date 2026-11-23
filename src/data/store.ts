@@ -3,8 +3,9 @@ import type { Category, EntryValue, Settings, TrackerDefinition, TrackerEntry, D
 import { newId } from '../domain/types';
 import * as db from './db';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, type TrackerDraft } from './defaults';
-import { assetIdsOf, blankPage, copyPage, coverOf, isJournalPage, type Page, type PageSize } from '../domain/pages';
+import { assetIdsOf, blankPage, bookOrder, copyPage, coverOf, editedPage, movedPage, type Page, type PageSize } from '../domain/pages';
 import { coverPage, matchingBack, standardCover } from '../domain/covers';
+import { planMove } from '../domain/order';
 import { exportAssets, forgetAllAssets, importAssets, removeUnusedAssets, type BackupAsset } from './assets';
 import { markDirty, markManyDirty } from './outbox';
 import type { SyncKind } from './merge';
@@ -82,8 +83,10 @@ interface State {
   createPage: (title: string, size: PageSize, from?: Page, isTemplate?: boolean) => Page;
   savePage: (page: Page) => void;
   deletePage: (id: string) => void;
-  /** Swap a journal page with its neighbour in book order. */
+  /** Move a journal page one place earlier or later in book order. */
   movePage: (id: string, by: 1 | -1) => void;
+  /** Move a journal page to a position in book order (0 = first). Writes only the moved page when it can. */
+  movePageTo: (id: string, index: number) => void;
   /** The book's cover page to edit: made from the built-in look the first time (`accent` is the theme colour), stored with its first change. */
   ensureCover: (role: 'cover' | 'back', accent: string) => Page;
   /** Forgets covers that were opened for editing but never changed. */
@@ -222,7 +225,7 @@ export const useStore = create<State>((set, get) => ({
   },
 
   savePage: (page) => {
-    const next = { ...page, updatedAt: now() };
+    const next = editedPage(page, now());
     unsavedCovers.delete(page.id);
     set((s) => ({ pages: s.pages.some((p) => p.id === page.id) ? s.pages.map((p) => (p.id === page.id ? next : p)) : [...s.pages, next] }));
     save('pages', next);
@@ -238,15 +241,24 @@ export const useStore = create<State>((set, get) => ({
   },
 
   movePage: (id, by) => {
-    const ordered = get().pages.filter(isJournalPage).sort((a, b) => a.sortOrder - b.sortOrder);
-    const i = ordered.findIndex((p) => p.id === id);
-    const other = ordered[i + by];
-    if (i < 0 || !other) return;
-    const a = { ...ordered[i], sortOrder: other.sortOrder };
-    const b = { ...other, sortOrder: ordered[i].sortOrder };
-    set((s) => ({ pages: s.pages.map((p) => (p.id === a.id ? a : p.id === b.id ? b : p)) }));
-    save('pages', a);
-    save('pages', b);
+    const i = bookOrder(get().pages).findIndex((p) => p.id === id);
+    if (i >= 0) get().movePageTo(id, i + by);
+  },
+
+  movePageTo: (id, index) => {
+    const changes = new Map(planMove(bookOrder(get().pages), id, index).map((c) => [c.id, c.sortOrder]));
+    if (!changes.size) return;
+    const at = now();
+    const moved: Page[] = [];
+    const pages = get().pages.map((p) => {
+      const sortOrder = changes.get(p.id);
+      if (sortOrder === undefined) return p;
+      const next = movedPage(p, sortOrder, at);
+      moved.push(next);
+      return next;
+    });
+    set({ pages });
+    saveMany('pages', moved);
   },
 
   ensureCover: (role, accent) => {

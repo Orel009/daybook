@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { backPreset, COVER_PRESETS, coverPage, coverPreset, matchingBack, standardCover } from './covers';
-import { assetIdsOf, blankPage, bookOrder, CHALLENGE_PRESETS, copyPage, coverOf, isFillable, isJournalPage, newChallenge, newFrame, PAGE_DIMS, type Page } from './pages';
+import { assetIdsOf, blankPage, bookOrder, CHALLENGE_PRESETS, copyPage, coverOf, editedPage, isFillable, isJournalPage, lastEdited, movedPage, newChallenge, newFrame, PAGE_DIMS, type Page } from './pages';
 
 const page = (id: string, sortOrder: number, extra: Partial<Page> = {}): Page => ({ ...blankPage(id, 'portrait', sortOrder), id, ...extra });
 
@@ -99,5 +99,41 @@ describe('photo slots and challenges', () => {
       }
     }
     expect(looks.size).toBe(CHALLENGE_PRESETS.length);
+  });
+});
+
+describe('recently edited', () => {
+  const made = '2026-03-01T10:00:00.000Z';
+  const old = page('a', 1, { createdAt: made, updatedAt: made });
+  it('an older page without editedAt counts as edited when it was last saved', () => {
+    expect(lastEdited(old)).toBe(made);
+  });
+  it('a content edit moves both dates', () => {
+    const next = editedPage(old, '2026-05-05T08:00:00.000Z');
+    expect(next.updatedAt).toBe('2026-05-05T08:00:00.000Z');
+    expect(lastEdited(next)).toBe('2026-05-05T08:00:00.000Z');
+  });
+  it('moving a page changes updatedAt (for sync) but not when it was edited', () => {
+    const moved = movedPage(old, 7.5, '2026-06-01T09:00:00.000Z');
+    expect(moved.sortOrder).toBe(7.5);
+    expect(moved.updatedAt).toBe('2026-06-01T09:00:00.000Z');
+    expect(lastEdited(moved)).toBe(made);
+    // and again: still the original date
+    expect(lastEdited(movedPage(moved, 2, '2026-07-01T09:00:00.000Z'))).toBe(made);
+  });
+  it('a moved page stays where it was in a "recent" list', () => {
+    const a = page('a', 1, { updatedAt: '2026-01-01T00:00:00.000Z' });
+    const b = page('b', 2, { updatedAt: '2026-02-01T00:00:00.000Z' });
+    const c = page('c', 3, { updatedAt: '2026-03-01T00:00:00.000Z' });
+    const recent = (list: Page[]) => [...list].sort((x, y) => lastEdited(y).localeCompare(lastEdited(x))).map((p) => p.id).join('');
+    expect(recent([a, b, c])).toBe('cba');
+    expect(recent([movedPage(a, 9, '2026-09-09T00:00:00.000Z'), b, c])).toBe('cba');
+    expect(recent([editedPage(a, '2026-09-09T00:00:00.000Z'), b, c])).toBe('acb');
+  });
+  it('a copy starts fresh: it is not as old as the page it was copied from', () => {
+    const copy = copyPage({ ...old, editedAt: made }, 'Copy', 2, false);
+    expect('editedAt' in copy).toBe(false);
+    expect(lastEdited(copy)).toBe(copy.updatedAt);
+    expect(copy.updatedAt > made).toBe(true);
   });
 });

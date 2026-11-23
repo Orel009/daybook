@@ -327,9 +327,21 @@ export interface Page {
   /** Front cover: leave out the "12 pages" line. */
   hideCount?: boolean;
   createdAt: string;
+  /** Any change, including a move in the book. Sync keeps the newest. */
   updatedAt: string;
+  /** When what is on the page last changed. Left out on older pages: then it is `updatedAt`. */
+  editedAt?: string;
   deletedAt?: string; // tombstone, kept so the delete reaches other devices
 }
+
+/** When the page's content last changed (for "recent" lists): moving a page in the book doesn't count. */
+export const lastEdited = (p: Pick<Page, 'editedAt' | 'updatedAt'>): string => p.editedAt ?? p.updatedAt;
+
+/** The page after a change to what is on it. */
+export const editedPage = <T extends Page>(p: T, at: string): T => ({ ...p, updatedAt: at, editedAt: at });
+
+/** The page at a new place in the book: saved and synced as changed, but not "recently edited". */
+export const movedPage = <T extends Page>(p: T, sortOrder: number, at: string): T => ({ ...p, sortOrder, editedAt: lastEdited(p), updatedAt: at });
 
 /** A page of the journal: not a template, not a cover. */
 export const isJournalPage = (p: Pick<Page, 'isTemplate' | 'role'>): boolean => !p.isTemplate && !p.role;
@@ -647,7 +659,7 @@ export const blankPage = (title: string, size: PageSize, sortOrder: number): Pag
 /** A full copy with fresh ids, so the copy and the original never share elements. */
 export const copyPage = (source: Page, title: string, sortOrder: number, isTemplate: boolean): Page => {
   // a copy is an ordinary page, even when it was made from a cover
-  const { role: _role, spine: _spine, hideCount: _hideCount, ...rest } = source;
+  const { role: _role, spine: _spine, hideCount: _hideCount, editedAt: _editedAt, ...rest } = source;
   return {
     ...rest,
     id: newId(),

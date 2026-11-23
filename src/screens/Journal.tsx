@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../data/store';
 import { LOCALE } from '../domain/dates';
-import { isJournalPage, type Page, type PageSize } from '../domain/pages';
+import { isJournalPage, lastEdited, type Page, type PageSize } from '../domain/pages';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
 import { Sheet } from '../ui/Sheet';
@@ -22,7 +22,7 @@ function PageCard({ page, children }: { page: Page; children?: ReactNode }) {
       <div className="page-card-text">
         <strong>{page.title || 'Untitled page'}</strong>
         <small className="muted">
-          Changed {new Date(page.updatedAt).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' })}
+          Changed {new Date(lastEdited(page)).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' })}
         </small>
       </div>
       {children}
@@ -125,7 +125,8 @@ function NewPageSheet({ onClose }: { onClose: () => void }) {
 export function Journal() {
   const pages = useStore((s) => s.pages)
     .filter(isJournalPage)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    // most recently edited first; moving a page in the book is not an edit
+    .sort((a, b) => lastEdited(b).localeCompare(lastEdited(a)));
   const [creating, setCreating] = useState(false);
 
   return (
@@ -134,9 +135,16 @@ export function Journal() {
         title="Journal"
         sub={pages.length ? `${pages.length} page${pages.length === 1 ? '' : 's'}` : undefined}
         action={
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            New page
-          </button>
+          <>
+            {pages.length > 1 && (
+              <Link className="btn" to="/arrange">
+                Arrange
+              </Link>
+            )}
+            <button className="btn btn-primary" onClick={() => setCreating(true)}>
+              New page
+            </button>
+          </>
         }
       />
       <CopiesWaiting />
@@ -164,7 +172,7 @@ export function Templates() {
   const navigate = useNavigate();
   const templates = useStore((s) => s.pages)
     .filter((p) => p.isTemplate)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => lastEdited(b).localeCompare(lastEdited(a)));
   const createPage = useStore((s) => s.createPage);
   const builtIn = useBuiltInTemplates();
   const [group, setGroup] = useState<string>('All');

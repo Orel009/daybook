@@ -74,7 +74,19 @@ export function Book() {
       owner={owner}
       cover={cover}
       back={back}
-      header={<PageHeader title="Book" sub="Swipe, tap the arrows or use the arrow keys to turn the page" />}
+      header={
+        <PageHeader
+          title="Book"
+          sub="Swipe, tap the arrows or use the arrow keys to turn the page"
+          action={
+            pages.length > 1 ? (
+              <Link className="btn" to="/arrange?from=book">
+                Arrange pages
+              </Link>
+            ) : undefined
+          }
+        />
+      }
       coverAction={(which) => (
         <button
           className="btn btn-small btn-primary"

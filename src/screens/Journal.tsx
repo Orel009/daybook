@@ -8,7 +8,8 @@ import { StaticPage } from '../ui/PageCanvas';
 import { Sheet } from '../ui/Sheet';
 import { useActiveTrackers } from '../data/hooks';
 import { draftFromPreset, PRESETS } from '../data/defaults';
-import { BUILT_IN_TEMPLATES, buildTemplatePage, TEMPLATE_GROUPS, TEMPLATE_SUBJECTS, type BuiltInTemplate } from '../templates/builtin';
+import { BUILT_IN_TEMPLATES, buildTemplatePage, type BuiltInTemplate } from '../templates/library';
+import { TEMPLATE_GROUPS, TEMPLATE_SUBJECTS } from '../templates/subjects';
 import { CopiesWaiting, SharedPagesSection } from './Shared';
 
 const THUMB = { portrait: 168, landscape: 224 };

@@ -27,6 +27,27 @@ import { travelTemplates } from './subjects/travel';
 import { homeTemplates } from './subjects/home';
 import { familyTemplates } from './subjects/family';
 import { holidaysTemplates } from './subjects/holidays';
+import { monthsTemplates } from './subjects/months';
+import { bookReviewsTemplates } from './subjects/book-reviews';
+import { challengesTemplates } from './subjects/challenges';
+import { studyTemplates } from './subjects/study';
+import { languageLearningTemplates } from './subjects/language-learning';
+import { plantsTemplates } from './subjects/plants';
+import { mindsetTemplates } from './subjects/mindset';
+import { bulletJournalTemplates } from './subjects/bullet-journal';
+import { recipesTemplates } from './subjects/recipes';
+import { petsTemplates } from './subjects/pets';
+import { kidsTemplates } from './subjects/kids';
+import { relationshipTemplates } from './subjects/relationship';
+import { musicAndPodcastsTemplates } from './subjects/music-and-podcasts';
+import { hobbiesAndCraftsTemplates } from './subjects/hobbies-and-crafts';
+import { friendsTemplates } from './subjects/friends';
+import { quotesTemplates } from './subjects/quotes';
+import { yearInReviewTemplates } from './subjects/year-in-review';
+import { wishlistTemplates } from './subjects/wishlist';
+import { eventsAndPartiesTemplates } from './subjects/events-and-parties';
+import { productivityTemplates } from './subjects/productivity';
+import { scrapbookTemplates } from './subjects/scrapbook';
 import { dividersTemplates } from './subjects/dividers';
 
 // Every ready-made template, in the order of the subjects. The app loads this
@@ -62,6 +83,27 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
   ...homeTemplates,
   ...familyTemplates,
   ...holidaysTemplates,
+  ...monthsTemplates,
+  ...bookReviewsTemplates,
+  ...challengesTemplates,
+  ...studyTemplates,
+  ...languageLearningTemplates,
+  ...plantsTemplates,
+  ...mindsetTemplates,
+  ...bulletJournalTemplates,
+  ...recipesTemplates,
+  ...petsTemplates,
+  ...kidsTemplates,
+  ...relationshipTemplates,
+  ...musicAndPodcastsTemplates,
+  ...hobbiesAndCraftsTemplates,
+  ...friendsTemplates,
+  ...quotesTemplates,
+  ...yearInReviewTemplates,
+  ...wishlistTemplates,
+  ...eventsAndPartiesTemplates,
+  ...productivityTemplates,
+  ...scrapbookTemplates,
   ...dividersTemplates,
 ];
 

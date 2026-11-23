@@ -20,6 +20,7 @@ import {
   type TrackerElement,
   type WritingElement,
 } from '../domain/pages';
+import { TAPE_DEFAULT_COLOR, type ThemedTape } from '../domain/tapes';
 import { newId } from '../domain/types';
 import type { TemplateSubject } from './subjects';
 
@@ -103,6 +104,21 @@ export const shelf = (x: number, y: number, w: number, h: number, books: number,
   id: newId(), type: 'bookshelf', x, y, w, h, rotation: 0, title: heading, color: 'tan', perShelf, books: Array.from({ length: books }, (_, i) => newBook(i)),
 });
 export const blank = (n: number) => Array.from({ length: n }, () => '');
+/** The numbers 1 to n as labels. */
+export const numbered = (n: number, from = 1) => Array.from({ length: n }, (_, i) => String(from + i));
+/** A band of colour across the page (a box without a line). */
+export const band = (x: number, y: number, w: number, h: number, color: string, rotation = 0): BoxElement => ({ ...box(x, y, w, h, '', rotation), fill: color, border: 'none' });
+/** A white card with a line around it, for putting text and stickers on. */
+export const card = (x: number, y: number, w: number, h: number, rotation = 0, o: Partial<BoxElement> = {}): BoxElement => ({ ...box(x, y, w, h, '', rotation), border: 'solid', ...o });
+/** A small label in the plain lettering. */
+export const label = (x: number, y: number, w: number, text: string, o: Partial<TextElement> = {}): TextElement => title(x, y, w, text, { font: 'clean', size: 26, color: SOFT, ...o });
+/** A sticky note with a few words on it. */
+export const sticky = (x: number, y: number, w: number, text: string, color: string, rotation = 0, o: Partial<TextElement> = {}): TextElement =>
+  title(x, y, w, text, { font: 'script', size: 40, align: 'center', note: color, rotation, ...o });
+/** The first day of month `m` (0 to 11): this year if the month hasn't passed, otherwise next year. */
+export const monthDate = (today: Date, m: number): Date => new Date(today.getFullYear() + (m < today.getMonth() ? 1 : 0), m, 1);
+/** The first day of the month `n` months after today's. */
+export const monthsAhead = (today: Date, n: number): Date => new Date(today.getFullYear(), today.getMonth() + n, 1);
 export const shortDays = (ctx: TemplateContext) => weekDays(ctx).map((d) => d.slice(0, 3));
 
 export const paper = (index: number, pattern: PageBackground['pattern'] = 'dots'): PageBackground => ({ color: BG_COLORS[index], pattern });
@@ -113,6 +129,15 @@ export const tiles = (x: number, y: number, w: number, h: number, heading: strin
   tiles: typeof labels === 'number' ? Array.from({ length: labels }, () => ({})) : labels.map((label) => (label ? { label } : {})),
   ...o,
 });
+/** A themed washi tape in its own colour (kraft is brown, lemons are on teal…). */
+export const themed = (x: number, y: number, w: number, pattern: ThemedTape, rotation = -3, o: Partial<TapeElement> = {}): TapeElement => ({ ...tape(x, y, w, TAPE_DEFAULT_COLOR[pattern], pattern, rotation), ...o });
+/** A row of stars (or hearts, drops…) to tap, without a panel: a rating. Tapping the fourth marks four. */
+export const rating = (x: number, y: number, w: number, color = 'butter', shape: GridElement['shape'] = 'star', n = 5): GridElement => ({
+  id: newId(), type: 'tiles', x, y, w, h: Math.round(w / n), rotation: 0, title: '', color, cols: n, tiles: Array.from({ length: n }, () => ({})), mark: 'fill', shape, bare: true, inOrder: true,
+});
+/** A challenge to colour in: tiles in a shape or a picture, with a progress count. */
+export const challenge = (x: number, y: number, w: number, h: number, heading: string, color: string, cols: number, labels: number | string[], o: Partial<GridElement> = {}): GridElement =>
+  tiles(x, y, w, h, heading, color, cols, labels, { mark: 'fill', count: true, ...o });
 /** A photo slot held by a strip of tape. */
 export const photoSpot = (x: number, y: number, w: number, h: number, rotation: number, color: string, pattern: TapePattern, o: Partial<FrameElement> = {}): PageElement[] => [
   frame(x, y, w, h, rotation, o),

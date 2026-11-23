@@ -1,12 +1,8 @@
-import { type BoxElement } from '../../domain/pages';
-import { art, box, paper, SOFT, sub, tape, title, type BuiltInTemplate } from '../kit';
+import { art, band, paper, SOFT, sub, tape, title, type BuiltInTemplate } from '../kit';
 
 // Chapter dividers: a page with a big title, a band of colour and a few
 // stickers, to split the book into parts. They are ordinary pages: put one
 // where a chapter starts (Journal → Arrange) and change its title in Edit.
-
-/** A band of colour across the page. */
-const band = (x: number, y: number, w: number, h: number, color: string, rotation = 0): BoxElement => ({ ...box(x, y, w, h, '', rotation), fill: color, border: 'none' });
 
 export const dividersTemplates: BuiltInTemplate[] = [
   {

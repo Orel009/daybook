@@ -1,6 +1,9 @@
-import { art, blank, frame, label, list, paper, rating, sticky, table, themed, title, weekDays, write, type BuiltInTemplate } from '../kit';
+import { art, blank, frame, label, lines, list, paper, rating, shape, sticky, table, themed, title, weekDays, write, type BuiltInTemplate } from '../kit';
 
 // Mindset: affirmations, reframing, what is and isn't in your control, wins, values, worries and a vision board.
+
+/** The name of a ring, centred above its lines. */
+const ringLabel = (x: number, y: number, w: number, text: string) => title(x, y, w, text, { size: 28, align: 'center' });
 
 export const mindsetTemplates: BuiltInTemplate[] = [
   {
@@ -41,18 +44,48 @@ export const mindsetTemplates: BuiltInTemplate[] = [
     id: 'mind-control',
     subject: 'Mindset',
     name: 'Circle of control',
-    description: 'Sort what is on your mind into in my control, can influence and out of my hands.',
+    description: 'Three circles inside each other: in my control in the middle, what I can influence around it, and what is out of my hands on the outside.',
     size: 'portrait',
     build: () => ({
       background: paper(6, 'plain'),
       elements: [
-        title(60, 50, 720, 'Circle of control', { size: 66 }),
-        list(60, 190, 250, 'In my control', 'green', 4),
-        list(325, 190, 250, 'Can influence', 'butter', 4),
-        list(590, 190, 250, 'Out of my hands', 'grey', 4),
-        write(60, 540, 780, 260, 'Where I will put my energy', 'mint'),
-        write(60, 830, 780, 200, 'What I am letting go of', 'lilac'),
-        art(395, 1050, 110, 'butterfly', 'lilac'),
+        title(60, 40, 660, 'Circle of control', { size: 62 }),
+        art(744, 30, 96, 'butterfly', 'lilac', 6),
+        // the circles sit low inside each other, so each ring has room to write at its top
+        shape(60, 140, 780, 780, 'circle', '#6F6180', { fill: true }),
+        shape(172, 358, 556, 556, 'circle', '#B8601C', { fill: true }),
+        shape(290, 586, 320, 320, 'circle', '#2F7A4D', { fill: true }),
+        ringLabel(300, 170, 300, 'Out of my hands'),
+        lines(270, 206, 360, 3),
+        ringLabel(310, 396, 280, 'I can influence'),
+        lines(290, 434, 320, 3),
+        ringLabel(340, 634, 220, 'In my control'),
+        lines(340, 672, 220, 4),
+        // the two headings run over two lines here, with three lines to write on under each
+        write(60, 938, 380, 230, 'Where I will put my energy', 'mint'),
+        write(460, 938, 380, 230, 'What I am letting go of', 'lilac'),
+      ],
+    }),
+  },
+  {
+    id: 'mind-control-two',
+    subject: 'Mindset',
+    name: 'Circle of control, two circles',
+    description: 'The simple version: what is in my control in the inner circle, everything else around it, and where my energy goes beside them.',
+    size: 'landscape',
+    build: () => ({
+      background: paper(8, 'plain'),
+      elements: [
+        title(40, 30, 700, 'Circle of control', { size: 62 }),
+        shape(40, 140, 720, 720, 'circle', '#6F6180', { fill: true }),
+        shape(200, 450, 400, 400, 'circle', '#2F7A4D', { fill: true }),
+        ringLabel(250, 172, 300, 'Out of my hands'),
+        lines(220, 210, 360, 5),
+        ringLabel(290, 488, 220, 'In my control'),
+        lines(265, 530, 270, 5),
+        write(800, 140, 350, 350, 'My energy goes to', 'mint'),
+        write(800, 510, 350, 350, 'I am letting go of', 'lilac'),
+        art(1050, 24, 100, 'butterfly', 'lilac', 6),
       ],
     }),
   },

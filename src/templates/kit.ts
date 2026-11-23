@@ -8,10 +8,13 @@ import {
   type ChecklistElement,
   type FrameElement,
   type GridElement,
+  type LineElement,
   type MonthElement,
   type PageBackground,
   type PageElement,
   type PageSize,
+  type ShapeElement,
+  type ShapeKind,
   type StickerElement,
   type TableElement,
   type TapeElement,
@@ -20,6 +23,7 @@ import {
   type TrackerElement,
   type WritingElement,
 } from '../domain/pages';
+import { lineFrom } from '../domain/line';
 import { TAPE_DEFAULT_COLOR, type ThemedTape } from '../domain/tapes';
 import { newId } from '../domain/types';
 import type { TemplateSubject } from './subjects';
@@ -80,6 +84,28 @@ export const table = (x: number, y: number, w: number, h: number, heading: strin
 });
 export const write = (x: number, y: number, w: number, h: number, heading: string, color: string, lined = true): WritingElement => ({
   id: newId(), type: 'writing', x, y, w, h, rotation: 0, title: heading, color, text: '', lined,
+});
+/** Lines to write on without a panel around them, for writing inside a shape. `rows` lines of 44 each. */
+export const lines = (x: number, y: number, w: number, rows: number, o: Partial<WritingElement> = {}): WritingElement => ({
+  ...write(x, y, w, rows * 44 + 4, '', 'butter'), bare: true, textAlign: 'center', ...o,
+});
+/**
+ * A hand-drawn line from one point to another. `bend` curves it: how far its
+ * middle swings out, as a fraction of its length (positive to the right of the
+ * way it is drawn, negative to the left).
+ */
+export const line = (x1: number, y1: number, x2: number, y2: number, o: Partial<LineElement> & { bend?: number } = {}): LineElement => {
+  const { bend = 0, ...rest } = o;
+  const g = lineFrom({ x: x1, y: y1 }, { x: x2, y: y2 }, bend);
+  if (g.mx === undefined) {
+    delete g.mx;
+    delete g.my;
+  }
+  return { id: newId(), type: 'line', rotation: 0, color: INK, weight: 5, ...g, ...rest };
+};
+/** The outline of a shape, to put around or behind other parts. */
+export const shape = (x: number, y: number, w: number, h: number, kind: ShapeKind, color = INK, o: Partial<ShapeElement> = {}): ShapeElement => ({
+  id: newId(), type: 'shape', x, y, w, h, rotation: 0, shape: kind, color, ...o,
 });
 export const box = (x: number, y: number, w: number, h: number, heading: string, rotation = 0): BoxElement => ({
   id: newId(), type: 'box', x, y, w, h, rotation, fill: 'white', border: 'dashed', title: heading,

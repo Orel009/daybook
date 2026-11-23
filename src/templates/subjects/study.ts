@@ -1,6 +1,32 @@
-import { art, blank, card, challenge, label, list, numbered, paper, rating, shortDays, sub, table, themed, tiles, title, weekStart, write, type BuiltInTemplate } from '../kit';
+import type { PageElement } from '../../domain/pages';
+import { art, blank, challenge, label, line, list, numbered, paper, rating, shape, shortDays, sub, table, themed, tiles, title, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Study: planning the week, the timetable, exams, notes and revision.
+
+/**
+ * A mind map: lines from the edge of the shape in the middle to each branch.
+ * The middle is an oval `rx` by `ry` around (cx, cy). Each branch is a place
+ * to write, and the line ends at the middle of the side `at` names. The lines
+ * come first, so they lie behind the shape and the branches.
+ */
+interface Branch {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  at: 'left' | 'right' | 'top' | 'bottom';
+  ink: string;
+  bend: number;
+}
+const branchLines = (cx: number, cy: number, rx: number, ry: number, branches: Branch[]): PageElement[] =>
+  branches.map((b) => {
+    const gap = 6; // the line stops just short of the branch
+    const tx = b.at === 'left' ? b.x - gap : b.at === 'right' ? b.x + b.w + gap : b.x + b.w / 2;
+    const ty = b.at === 'top' ? b.y - gap : b.at === 'bottom' ? b.y + b.h + gap : b.y + b.h / 2;
+    // where the way to the branch crosses the edge of the oval
+    const k = 1 / Math.hypot((tx - cx) / rx, (ty - cy) / ry);
+    return line(cx + (tx - cx) * k, cy + (ty - cy) * k, tx, ty, { bend: b.bend, color: b.ink, weight: 5 });
+  });
 
 export const studyTemplates: BuiltInTemplate[] = [
   {
@@ -76,22 +102,58 @@ export const studyTemplates: BuiltInTemplate[] = [
     id: 'study-mind-map',
     subject: 'Study',
     name: 'Mind map',
-    description: 'The main idea in the middle and eight branches around it to fill in.',
+    description: 'The main idea in a circle in the middle, joined by curved lines to six branches with lines to write on.',
     size: 'landscape',
-    build: () => ({
-      background: paper(8),
-      elements: [
-        title(50, 24, 380, 'Mind map', { size: 66 }),
-        card(430, 350, 340, 190, 0, { title: 'Main idea', shadow: true }),
-        write(450, 130, 300, 190, 'Branch', 'butter', false),
-        write(450, 570, 300, 190, 'Branch', 'mint', false),
-        ...[160, 390, 620].flatMap((y, i) => [
-          write(60, y, 340, 200, 'Branch', ['rose', 'peach', 'lilac'][i], false),
-          write(800, y, 340, 200, 'Branch', ['sky', 'sage', 'coral'][i], false),
-        ]),
-        art(1070, 20, 90, 'sparkle', 'butter'),
-      ],
-    }),
+    build: () => {
+      // three branches down each side of the circle
+      const rows = [146, 389, 632];
+      const looks: [string, string][] = [['rose', '#B03A6B'], ['butter', '#B8601C'], ['mint', '#2F7A4D'], ['sky', '#2F5FB0'], ['lilac', '#6B45B0'], ['coral', '#B5383F']];
+      const branches: (Branch & { color: string })[] = rows.flatMap((y, i) => [
+        { x: 40, y, w: 290, h: 192, at: 'right' as const, color: looks[i][0], ink: looks[i][1], bend: [0.14, 0.05, -0.14][i] },
+        { x: 870, y, w: 290, h: 192, at: 'left' as const, color: looks[i + 3][0], ink: looks[i + 3][1], bend: [-0.14, -0.05, 0.14][i] },
+      ]);
+      return {
+        background: paper(8),
+        elements: [
+          ...branchLines(600, 485, 130, 130, branches),
+          shape(470, 355, 260, 260, 'circle', '#B8601C', { fill: true, weight: 5 }),
+          title(490, 458, 220, 'Main idea', { size: 42, align: 'center' }),
+          ...branches.map((b) => write(b.x, b.y, b.w, b.h, 'Branch', b.color)),
+          title(350, 28, 500, 'Mind map', { size: 66, align: 'center' }),
+          art(1070, 20, 90, 'sparkle', 'butter'),
+          art(40, 24, 90, 'bulb', 'butter', -8),
+        ],
+      };
+    },
+  },
+  {
+    id: 'study-mind-map-dump',
+    subject: 'Study',
+    name: 'Brain dump mind map',
+    description: 'Everything on your mind in a cloud in the middle, with eight small branches around it to empty your head into.',
+    size: 'landscape',
+    build: () => {
+      const inks = ['#B03A6B', '#B8601C', '#2F7A4D', '#1E7A78', '#2F5FB0', '#6B45B0', '#B5383F', '#6F6180'];
+      const rows = [160, 397, 634];
+      const spots: Omit<Branch, 'ink'>[] = [
+        ...rows.map((y, i) => ({ x: 40, y, w: 240, h: 136, at: 'right' as const, bend: [0.12, 0.05, -0.12][i] })),
+        { x: 480, y: 140, w: 240, h: 136, at: 'bottom' as const, bend: 0.08 },
+        ...rows.map((y, i) => ({ x: 920, y, w: 240, h: 136, at: 'left' as const, bend: [-0.12, -0.05, 0.12][i] })),
+        { x: 480, y: 654, w: 240, h: 136, at: 'top' as const, bend: 0.08 },
+      ];
+      const branches: Branch[] = spots.map((s, i) => ({ ...s, ink: inks[i] }));
+      return {
+        background: paper(3),
+        elements: [
+          ...branchLines(600, 465, 138, 88, branches),
+          shape(440, 360, 320, 210, 'cloud', '#2F5FB0', { fill: true, weight: 5 }),
+          title(460, 443, 280, 'On my mind', { size: 36, align: 'center' }),
+          ...branches.map((b) => write(b.x, b.y, b.w, b.h, '', 'butter')),
+          title(40, 36, 420, 'Brain dump', { size: 62 }),
+          art(1060, 30, 96, 'bulb', 'butter', 8),
+        ],
+      };
+    },
   },
   {
     id: 'study-revision',

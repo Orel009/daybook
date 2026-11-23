@@ -27,4 +27,4 @@ export const TEMPLATE_GROUPS: { name: string; subjects: TemplateSubject[] }[] = 
 ];
 
 /** How many ready-made templates there are, for screens that mention the number without loading them. */
-export const TEMPLATE_COUNT = 256;
+export const TEMPLATE_COUNT = 258;

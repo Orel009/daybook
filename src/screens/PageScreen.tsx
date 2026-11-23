@@ -985,6 +985,14 @@ function PageEditor({ stored }: { stored: Page }) {
                 <button className={`chip ${selected.count ? 'is-on' : ''}`} aria-pressed={!!selected.count} onClick={() => patchEl(selected.id, { count: selected.count ? undefined : true })}>
                   Show progress
                 </button>
+                <button className={`chip ${selected.bare ? '' : 'is-on'}`} aria-pressed={!selected.bare} onClick={() => patchEl(selected.id, { bare: selected.bare ? undefined : true })}>
+                  Panel
+                </button>
+                {((selected.layout ?? 'grid') === 'grid' || selected.layout === 'path') && (
+                  <button className={`chip ${selected.inOrder ? 'is-on' : ''}`} aria-pressed={!!selected.inOrder} onClick={() => patchEl(selected.id, { inOrder: selected.inOrder ? undefined : true })}>
+                    Fill in order
+                  </button>
+                )}
                 {(selected.layout ?? 'grid') === 'grid' && (
                   <>
                     <button className={`chip ${selected.bingo ? 'is-on' : ''}`} aria-pressed={!!selected.bingo} onClick={() => patchEl(selected.id, { bingo: !selected.bingo })}>

@@ -1254,6 +1254,8 @@ button.pg-frame-add:active { background: rgb(58 43 71 / 0.06); }
 /* ---------- challenges in other shapes: shaped tiles, a path, pictures ---------- */
 .pp-tilegrid:not(.is-shaped).mark-fill .pp-tile.is-done { background: var(--pp-mark); }
 .pp-tilegrid.is-shaped .pp-tiles { padding: 10px; }
+.pp-panel.pp-tilegrid.is-bare { border: 0; border-radius: 0; background: none; overflow: visible; }
+.pp-tilegrid.is-bare .pp-tiles { padding: 0; }
 .pp-tilegrid.is-shaped .pp-tile { border: 0; padding: 0; overflow: visible; background: none; }
 .pp-shape { position: absolute; left: 5%; top: 5%; width: 90%; height: 90%; overflow: visible; fill: #fffdf9; stroke: #3a2b47; stroke-width: 4; stroke-linejoin: round; }
 .pp-shape-line { fill: none; stroke: rgb(58 43 71 / 0.4); stroke-width: 3.500; stroke-linecap: round; }

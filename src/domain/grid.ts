@@ -70,9 +70,9 @@ export function progress(g: GridShape): Progress {
  * layout that fills up in order, tapping an empty segment fills up to it, and
  * tapping a filled one empties it and everything above.
  */
-export function markTile<T extends { done?: boolean }>(g: { tiles: readonly T[]; layout?: string }, i: number): T[] {
+export function markTile<T extends { done?: boolean }>(g: { tiles: readonly T[]; layout?: string; inOrder?: boolean }, i: number): T[] {
   if (i < 0 || i >= g.tiles.length) return [...g.tiles];
-  if (!isSequential(g.layout)) return g.tiles.map((t, j) => (j === i ? { ...t, done: !t.done } : t));
+  if (!isSequential(g.layout) && !g.inOrder) return g.tiles.map((t, j) => (j === i ? { ...t, done: !t.done } : t));
   const upTo = g.tiles[i].done ? i : i + 1;
   return g.tiles.map((t, j) => (Boolean(t.done) === j < upTo ? t : { ...t, done: j < upTo }));
 }

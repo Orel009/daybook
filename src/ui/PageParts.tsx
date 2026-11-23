@@ -452,7 +452,7 @@ export function GridBody({ el, mode, onChange }: PartProps<GridElement>) {
     const seg = SEGMENT[layout];
     const pct = (v: number, of: number) => `${(v / of) * 100}%`;
     return (
-      <div className={`pp-panel pp-tilegrid is-picture pic-${layout}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
+      <div className={`pp-panel pp-tilegrid ${el.bare ? 'is-bare ' : ''}is-picture pic-${layout}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
         <Head title={el.title} color={el.color} extra={extra} />
         <div className="pp-picrow">
           <div className="pp-picwrap">
@@ -510,7 +510,7 @@ export function GridBody({ el, mode, onChange }: PartProps<GridElement>) {
     const mark = el.mark ?? 'fill';
     const last = el.tiles.length - 1;
     return (
-      <div className={`pp-panel pp-tilegrid is-shaped shape-${shape} ${cells ? 'is-path' : ''} mark-${mark}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
+      <div className={`pp-panel pp-tilegrid ${el.bare ? 'is-bare ' : ''}is-shaped shape-${shape} ${cells ? 'is-path' : ''} mark-${mark}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
         <Head title={el.title} color={el.color} extra={extra} />
         <div className="pp-tiles" style={{ gridTemplateColumns: `repeat(${Math.max(1, el.cols)}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
           {el.tiles.map((t, i) => {
@@ -552,7 +552,7 @@ export function GridBody({ el, mode, onChange }: PartProps<GridElement>) {
   }
 
   return (
-    <div className={`pp-panel pp-tilegrid mark-${el.mark ?? 'cross'}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
+    <div className={`pp-panel pp-tilegrid ${el.bare ? 'is-bare ' : ''}mark-${el.mark ?? 'cross'}`} style={{ ...textVars(el), ['--pp-mark' as string]: tint(el.color) }}>
       <Head title={el.title} color={el.color} extra={extra} />
       <div className="pp-tiles" style={{ gridTemplateColumns: `repeat(${Math.max(1, el.cols)}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {el.tiles.map((t, i) => {

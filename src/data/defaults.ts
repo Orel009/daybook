@@ -58,6 +58,7 @@ export const PRESETS: TrackerPreset[] = [
     visualizationId: 'pixels', schedule: { kind: 'daily' },
   },
   { name: 'Reading', emoji: '📖', color: 'sage', categoryId: 'productivity', valueType: 'duration', target: 20, schedule: { kind: 'daily' } },
+  { name: 'Language practice', emoji: '🗣️', color: 'teal', categoryId: 'productivity', valueType: 'duration', target: 15, schedule: { kind: 'daily' } },
   { name: 'Gratitude', emoji: '🌸', color: 'rose', categoryId: 'mind', valueType: 'text', schedule: { kind: 'daily' } },
   { name: 'Skincare', emoji: '🧴', color: 'peach', categoryId: 'lifestyle', valueType: 'boolean', schedule: { kind: 'daily' } },
   { name: 'Savings', emoji: '💰', color: 'mint', categoryId: 'finance', valueType: 'number', schedule: { kind: 'perMonth', times: 1 } },

@@ -108,6 +108,12 @@ describe('marking with a tap', () => {
     const g = { ...grid(1, 6, [0, 4]), layout: 'jar' };
     expect(dones(markTile(g, 2))).toBe('xxx...');
   });
+  it('a rating fills in order whatever its layout: the fourth star marks four', () => {
+    const stars = { ...grid(5, 5), inOrder: true };
+    expect(dones(markTile(stars, 3))).toBe('xxxx.');
+    expect(dones(markTile({ ...grid(5, 5, [0, 1, 2, 3]), inOrder: true }, 3))).toBe('xxx..');
+    expect(dones(markTile({ ...grid(5, 5, [0, 1, 2, 3]), inOrder: true }, 0))).toBe('.....');
+  });
   it('ignores a tap outside the tiles', () => {
     expect(dones(markTile(grid(2, 4, [0]), 9))).toBe('x...');
   });

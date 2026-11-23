@@ -285,6 +285,10 @@ export interface GridElement extends ElementBase, PartTextStyle {
   layout?: TileLayout;
   /** Show "done / all" in the heading. */
   count?: boolean;
+  /** Without the panel around it: a bare row of stars or hearts, as for a rating. */
+  bare?: boolean;
+  /** Fills up in order, like a rating: tapping the fourth star marks four. */
+  inOrder?: boolean;
 }
 
 export type PageElement =

@@ -42,3 +42,37 @@ export const bingoCount = (g: GridShape): number => bingoLines(g).length;
 
 /** Tiles done, free tile included, out of all tiles. */
 export const tilesDone = (g: GridShape): number => g.tiles.reduce((n, _, i) => n + (tileDone(g, i) ? 1 : 0), 0);
+
+// ----- challenges in other shapes (hearts, a path, a jar, a thermometer…)
+
+/** Layouts that fill up in order, like a thermometer: marking a segment marks everything below it. */
+const SEQUENTIAL: ReadonlySet<string> = new Set(['jar', 'thermo', 'trail']);
+export const isSequential = (layout: string | undefined): boolean => SEQUENTIAL.has(layout ?? '');
+
+/** Only plain rows of tiles can make bingo lines. */
+export const hasLines = (g: Pick<GridElement, 'layout' | 'bingo'>): boolean => Boolean(g.bingo) && (g.layout ?? 'grid') === 'grid';
+
+export interface Progress {
+  done: number;
+  total: number;
+  /** Every tile is done (and there is at least one). */
+  complete: boolean;
+}
+
+export function progress(g: GridShape): Progress {
+  const total = g.tiles.length;
+  const done = tilesDone(g);
+  return { done, total, complete: total > 0 && done === total };
+}
+
+/**
+ * The tiles after a tap on tile `i`. Usually the tap toggles that tile. In a
+ * layout that fills up in order, tapping an empty segment fills up to it, and
+ * tapping a filled one empties it and everything above.
+ */
+export function markTile<T extends { done?: boolean }>(g: { tiles: readonly T[]; layout?: string }, i: number): T[] {
+  if (i < 0 || i >= g.tiles.length) return [...g.tiles];
+  if (!isSequential(g.layout)) return g.tiles.map((t, j) => (j === i ? { ...t, done: !t.done } : t));
+  const upTo = g.tiles[i].done ? i : i + 1;
+  return g.tiles.map((t, j) => (Boolean(t.done) === j < upTo ? t : { ...t, done: j < upTo }));
+}

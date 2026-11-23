@@ -239,6 +239,29 @@ export interface GridTile {
   done?: boolean;
 }
 
+export const TILE_SHAPES = [
+  { id: 'square', name: 'Squares' },
+  { id: 'circle', name: 'Circles' },
+  { id: 'heart', name: 'Hearts' },
+  { id: 'star', name: 'Stars' },
+  { id: 'leaf', name: 'Leaves' },
+  { id: 'drop', name: 'Drops' },
+  { id: 'spine', name: 'Book spines' },
+] as const;
+export type TileShape = (typeof TILE_SHAPES)[number]['id'];
+
+/** How the tiles are arranged: rows, a winding path, or the segments of a picture. */
+export const TILE_LAYOUTS = [
+  { id: 'grid', name: 'Rows' },
+  { id: 'path', name: 'Path' },
+  { id: 'jar', name: 'Jar of marbles' },
+  { id: 'thermo', name: 'Thermometer' },
+  { id: 'trail', name: 'Mountain trail' },
+  { id: 'tree', name: 'Tree' },
+  { id: 'heart', name: 'Big heart' },
+] as const;
+export type TileLayout = (typeof TILE_LAYOUTS)[number]['id'];
+
 /** Tiles in rows: bingo cards, challenges, A to Z. Rows follow from the tile count. */
 export interface GridElement extends ElementBase, PartTextStyle {
   type: 'tiles';
@@ -250,7 +273,13 @@ export interface GridElement extends ElementBase, PartTextStyle {
   freeCenter?: boolean;
   /** Count full rows, columns and diagonals, and cheer when one is made. */
   bingo?: boolean;
-  mark?: 'cross' | 'stamp';
+  mark?: 'cross' | 'stamp' | 'fill';
+  /** Left out: square tiles, as always. */
+  shape?: TileShape;
+  /** Left out: rows. */
+  layout?: TileLayout;
+  /** Show "done / all" in the heading. */
+  count?: boolean;
 }
 
 export type PageElement =
@@ -533,6 +562,36 @@ export const newGrid = (page: Page, preset: GridPreset): GridElement => {
     freeCenter: shape.freeCenter,
     mark: shape.mark,
   };
+};
+
+// Challenges in other shapes than a bingo card. All of them are tile grids
+// with a shape and a layout, so they tick, count and sync like any tile grid.
+const numbers = (n: number) => Array.from({ length: n }, (_, i) => ({ label: String(i + 1) }));
+const empty = (n: number) => Array.from({ length: n }, () => ({}));
+type ChallengeShape = Pick<GridElement, 'title' | 'color' | 'cols' | 'tiles' | 'mark' | 'shape' | 'layout'> & { w: number; h: number };
+
+export const CHALLENGE_PRESETS = [
+  { id: 'stamps', name: 'Stamp card', hint: '10 circles to stamp', make: (): ChallengeShape => ({ title: 'Stamp card', color: 'coral', cols: 5, tiles: empty(10), mark: 'stamp', shape: 'circle', w: 640, h: 330 }) },
+  { id: 'hearts', name: '100 hearts', hint: 'Colour in a heart each time', make: (): ChallengeShape => ({ title: '100 hearts', color: 'rose', cols: 10, tiles: empty(100), mark: 'fill', shape: 'heart', w: 700, h: 760 }) },
+  { id: 'stars', name: 'Stars', hint: '30 stars to earn', make: (): ChallengeShape => ({ title: 'Gold stars', color: 'butter', cols: 6, tiles: numbers(30), mark: 'fill', shape: 'star', w: 660, h: 600 }) },
+  { id: 'leaves', name: 'Leaves', hint: '24 leaves to colour', make: (): ChallengeShape => ({ title: 'Turn over a new leaf', color: 'green', cols: 6, tiles: empty(24), mark: 'fill', shape: 'leaf', w: 660, h: 520 }) },
+  { id: 'drops', name: 'Drops', hint: 'A week of 8 glasses a day', make: (): ChallengeShape => ({ title: 'Glasses of water', color: 'sky', cols: 8, tiles: empty(56), mark: 'fill', shape: 'drop', w: 700, h: 640 }) },
+  { id: 'spines', name: 'Bookshelf to colour', hint: '50 books', make: (): ChallengeShape => ({ title: '50 books', color: 'lilac', cols: 10, tiles: empty(50), mark: 'fill', shape: 'spine', w: 760, h: 820 }) },
+  { id: 'path', name: 'Path', hint: '30 steps from start to finish', make: (): ChallengeShape => ({ title: '30-day challenge', color: 'mint', cols: 6, tiles: numbers(30), mark: 'fill', shape: 'circle', layout: 'path', w: 720, h: 700 }) },
+  { id: 'jar', name: 'Jar of marbles', hint: 'A marble for every book', make: (): ChallengeShape => ({ title: 'Reading jar', color: 'sky', cols: 1, tiles: empty(40), mark: 'fill', layout: 'jar', w: 480, h: 640 }) },
+  { id: 'thermo', name: 'Thermometer', hint: 'Fill it up step by step', make: (): ChallengeShape => ({ title: 'Savings goal', color: 'red', cols: 1, tiles: Array.from({ length: 10 }, (_, i) => ({ label: `${(i + 1) * 10}%` })), mark: 'fill', layout: 'thermo', w: 360, h: 760 }) },
+  { id: 'trail', name: 'Mountain trail', hint: '12 stops to the top', make: (): ChallengeShape => ({ title: 'To the summit', color: 'lilac', cols: 1, tiles: numbers(12), mark: 'fill', layout: 'trail', w: 800, h: 480 }) },
+  { id: 'tree', name: 'Tree with leaves', hint: 'A leaf for every day', make: (): ChallengeShape => ({ title: 'Habit tree', color: 'green', cols: 1, tiles: empty(30), mark: 'fill', layout: 'tree', w: 620, h: 700 }) },
+  { id: 'bigheart', name: 'Heart of hearts', hint: '100 little hearts in one big one', make: (): ChallengeShape => ({ title: 'Acts of kindness', color: 'rose', cols: 1, tiles: empty(100), mark: 'fill', layout: 'heart', w: 700, h: 700 }) },
+] as const;
+export type ChallengePreset = (typeof CHALLENGE_PRESETS)[number]['id'];
+
+export const newChallenge = (page: Page, preset: ChallengePreset): GridElement => {
+  const { w: pw, h: ph } = PAGE_DIMS[page.size];
+  const { w: w0, h: h0, ...rest } = (CHALLENGE_PRESETS.find((p) => p.id === preset) ?? CHALLENGE_PRESETS[0]).make();
+  const w = Math.min(w0, pw - 80);
+  const h = Math.min(h0, ph - 80);
+  return { id: newId(), type: 'tiles', x: Math.round((pw - w) / 2), y: Math.round((ph - h) / 2), w, h, rotation: 0, ...rest, count: true };
 };
 
 export const blankPage = (title: string, size: PageSize, sortOrder: number): Page => ({

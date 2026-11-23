@@ -6,15 +6,19 @@ import { useStore } from '../data/store';
 import {
   autoHeight,
   BG_COLORS,
+  CHALLENGE_PRESETS,
   FRAME_STYLES,
   newBook,
   newBookshelf,
   newBox,
+  newChallenge,
   newChecklist,
   newFrame,
   newGrid,
   GRID_PRESETS,
   isWritable,
+  TILE_LAYOUTS,
+  TILE_SHAPES,
   type FrameElement,
   type PartTextStyle,
   newCustomSticker,
@@ -98,7 +102,7 @@ function applyGesture(start: PageElement, h0: number, mode: Mode, dx: number, dy
   } else if (start.type === 'tape') {
     w = Math.max(40, start.w + lx);
     h = Math.max(16, h0 + ly);
-  } else if (start.type === 'box' || start.type === 'table' || start.type === 'writing' || start.type === 'month' || start.type === 'bookshelf' || start.type === 'frame') {
+  } else if (start.type === 'box' || start.type === 'table' || start.type === 'writing' || start.type === 'month' || start.type === 'bookshelf' || start.type === 'tiles' || start.type === 'frame') {
     w = Math.max(120, start.w + lx);
     h = Math.max(80, h0 + ly);
   } else {
@@ -580,7 +584,7 @@ function PageEditor({ stored }: { stored: Page }) {
         <span aria-hidden="true">📚</span>Shelf
       </button>
       <button className="pe-tool" onClick={() => setSheet('grid')}>
-        <span aria-hidden="true">🎯</span>Grid
+        <span aria-hidden="true">🎯</span>Challenge
       </button>
       <button className="pe-tool" onClick={() => addEl(newBox(pageRef.current))}>
         <span aria-hidden="true">⬜</span>Box
@@ -865,31 +869,79 @@ function PageEditor({ stored }: { stored: Page }) {
 
           {selected.type === 'tiles' && (
             <>
-              <div className="pe-row">
-                <div className="seg seg-small" role="radiogroup" aria-label="Mark">
-                  {([['cross', 'Cross'], ['stamp', 'Stamp']] as const).map(([m, name]) => (
-                    <button key={m} role="radio" aria-checked={(selected.mark ?? 'cross') === m} className={(selected.mark ?? 'cross') === m ? 'is-on' : ''} onClick={() => patchEl(selected.id, { mark: m })}>
-                      {name}
-                    </button>
-                  ))}
-                </div>
-                <button className={`chip ${selected.bingo ? 'is-on' : ''}`} aria-pressed={!!selected.bingo} onClick={() => patchEl(selected.id, { bingo: !selected.bingo })}>
-                  Bingo lines
-                </button>
-                <button className={`chip ${selected.freeCenter ? 'is-on' : ''}`} aria-pressed={!!selected.freeCenter} onClick={() => patchEl(selected.id, { freeCenter: !selected.freeCenter })}>
-                  Free centre
-                </button>
+              <div className="pe-row pe-two">
+                <label className="pe-field">
+                  <span>Layout</span>
+                  <select value={selected.layout ?? 'grid'} onChange={(e) => patchEl(selected.id, { layout: e.target.value === 'grid' ? undefined : e.target.value })} aria-label="Layout">
+                    {TILE_LAYOUTS.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {(selected.layout ?? 'grid') === 'grid' || selected.layout === 'path' ? (
+                  <label className="pe-field">
+                    <span>Shape</span>
+                    <select
+                      value={selected.shape ?? 'square'}
+                      onChange={(e) => patchEl(selected.id, e.target.value === 'square' ? { shape: undefined } : { shape: e.target.value, mark: selected.shape ? selected.mark : 'fill' })}
+                      aria-label="Tile shape"
+                    >
+                      {TILE_SHAPES.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <span />
+                )}
               </div>
+              {((selected.layout ?? 'grid') === 'grid' || selected.layout === 'path') && (
+                <div className="pe-row">
+                  <div className="seg seg-small" role="radiogroup" aria-label="Mark">
+                    {([['cross', 'Cross'], ['stamp', 'Stamp'], ['fill', 'Colour in']] as const).map(([m, name]) => {
+                      const now = selected.mark ?? ((selected.shape ?? 'square') === 'square' && selected.layout !== 'path' ? 'cross' : 'fill');
+                      return (
+                        <button key={m} role="radio" aria-checked={now === m} className={now === m ? 'is-on' : ''} onClick={() => patchEl(selected.id, { mark: m })}>
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="pe-row">
+                <button className={`chip ${selected.count ? 'is-on' : ''}`} aria-pressed={!!selected.count} onClick={() => patchEl(selected.id, { count: selected.count ? undefined : true })}>
+                  Show progress
+                </button>
+                {(selected.layout ?? 'grid') === 'grid' && (
+                  <>
+                    <button className={`chip ${selected.bingo ? 'is-on' : ''}`} aria-pressed={!!selected.bingo} onClick={() => patchEl(selected.id, { bingo: !selected.bingo })}>
+                      Bingo lines
+                    </button>
+                    {(selected.shape ?? 'square') === 'square' && (
+                      <button className={`chip ${selected.freeCenter ? 'is-on' : ''}`} aria-pressed={!!selected.freeCenter} onClick={() => patchEl(selected.id, { freeCenter: !selected.freeCenter })}>
+                        Free centre
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              {((selected.layout ?? 'grid') === 'grid' || selected.layout === 'path') && (
+                <label className="pe-slider">
+                  <span>Columns: {selected.cols}</span>
+                  <input type="range" min={2} max={12} value={selected.cols} onChange={(e) => patchEl(selected.id, { cols: Number(e.target.value) }, 'grid-cols')} />
+                </label>
+              )}
               <label className="pe-slider">
-                <span>Columns: {selected.cols}</span>
-                <input type="range" min={2} max={8} value={selected.cols} onChange={(e) => patchEl(selected.id, { cols: Number(e.target.value) }, 'grid-cols')} />
-              </label>
-              <label className="pe-slider">
-                <span>Tiles: {selected.tiles.length}</span>
+                <span>{selected.layout === 'trail' ? 'Stops' : 'Tiles'}: {selected.tiles.length}</span>
                 <input
                   type="range"
-                  min={4}
-                  max={64}
+                  min={selected.layout === 'trail' ? 3 : 4}
+                  max={selected.layout === 'trail' ? 16 : selected.layout === 'thermo' ? 31 : 100}
                   value={selected.tiles.length}
                   onChange={(e) => {
                     const n = Number(e.target.value);
@@ -1291,9 +1343,10 @@ function PageEditor({ stored }: { stored: Page }) {
       )}
 
       {sheet === 'grid' && (
-        <Sheet title="Add a tile grid" onClose={() => setSheet(null)}>
-          <p className="muted">Write on the tiles in Edit; tap a tile to mark it when you are done.</p>
-          <div className="menu-list">
+        <Sheet title="Add a challenge" onClose={() => setSheet(null)}>
+          <p className="muted">Write on it in Edit; after Done, a tap marks a tile, a marble or a step.</p>
+          <h3 className="sheet-sub">Tiles and bingo</h3>
+          <div className="menu-list is-two">
             {GRID_PRESETS.map((g) => (
               <button
                 key={g.id}
@@ -1304,6 +1357,22 @@ function PageEditor({ stored }: { stored: Page }) {
                 }}
               >
                 {g.name}
+              </button>
+            ))}
+          </div>
+          <h3 className="sheet-sub">Other shapes</h3>
+          <div className="menu-list is-two">
+            {CHALLENGE_PRESETS.map((c) => (
+              <button
+                key={c.id}
+                className="btn btn-stack"
+                onClick={() => {
+                  addEl(newChallenge(pageRef.current, c.id));
+                  setSheet(null);
+                }}
+              >
+                {c.name}
+                <small>{c.hint}</small>
               </button>
             ))}
           </div>

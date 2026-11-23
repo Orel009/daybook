@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bingoCount, bingoLines, centerIndex, gridRows, isFullGrid, tileDone, tilesDone } from './grid';
+import { bingoCount, bingoLines, centerIndex, gridRows, hasLines, isFullGrid, isSequential, markTile, progress, tileDone, tilesDone } from './grid';
 
 const grid = (cols: number, n: number, done: number[] = [], freeCenter = false) => ({
   cols,
@@ -58,5 +58,62 @@ describe('bingo', () => {
   });
   it('non-square full grids have rows and columns but no diagonals', () => {
     expect(bingoCount(grid(4, 8, range(0, 7)))).toBe(2 + 4);
+  });
+});
+
+describe('progress', () => {
+  it('counts done tiles out of all tiles', () => {
+    expect(progress(grid(10, 100, range(0, 36)))).toEqual({ done: 37, total: 100, complete: false });
+    expect(progress(grid(5, 10))).toEqual({ done: 0, total: 10, complete: false });
+  });
+  it('is complete only when every tile is done', () => {
+    expect(progress(grid(5, 10, range(0, 8))).complete).toBe(false);
+    expect(progress(grid(5, 10, range(0, 9))).complete).toBe(true);
+    expect(progress(grid(5, 0)).complete).toBe(false);
+  });
+  it('the free centre counts towards the total done', () => {
+    expect(progress(grid(3, 9, [], true))).toEqual({ done: 1, total: 9, complete: false });
+    expect(progress(grid(3, 9, [0, 1, 2, 3, 5, 6, 7, 8], true)).complete).toBe(true);
+  });
+});
+
+describe('marking with a tap', () => {
+  const dones = (tiles: { done?: boolean }[]) => tiles.map((t) => (t.done ? 'x' : '.')).join('');
+  it('toggles one tile in rows, on a path, a tree or a heart', () => {
+    for (const layout of [undefined, 'grid', 'path', 'tree', 'heart']) {
+      const g = { ...grid(3, 6, [1]), layout };
+      expect(dones(markTile(g, 4))).toBe('.x..x.');
+      expect(dones(markTile(g, 1))).toBe('......');
+    }
+  });
+  it('keeps what is written on a tile', () => {
+    const g: { tiles: { label?: string; text?: string; done?: boolean }[] } = { tiles: [{ label: 'A', text: 'Apples' }, { label: 'B' }] };
+    expect(markTile(g, 0)[0]).toEqual({ label: 'A', text: 'Apples', done: true });
+  });
+  it('fills up to the tapped segment in a jar, a thermometer and a trail', () => {
+    for (const layout of ['jar', 'thermo', 'trail']) {
+      expect(isSequential(layout)).toBe(true);
+      const g = { ...grid(1, 6), layout };
+      expect(dones(markTile(g, 0))).toBe('x.....');
+      expect(dones(markTile(g, 3))).toBe('xxxx..');
+    }
+  });
+  it('tapping a filled segment empties it and everything above', () => {
+    const g = { ...grid(1, 6, [0, 1, 2, 3]), layout: 'thermo' };
+    expect(dones(markTile(g, 3))).toBe('xxx...');
+    expect(dones(markTile(g, 1))).toBe('x.....');
+    expect(dones(markTile(g, 0))).toBe('......');
+  });
+  it('a filling layout never has gaps, even when the saved marks had one', () => {
+    const g = { ...grid(1, 6, [0, 4]), layout: 'jar' };
+    expect(dones(markTile(g, 2))).toBe('xxx...');
+  });
+  it('ignores a tap outside the tiles', () => {
+    expect(dones(markTile(grid(2, 4, [0]), 9))).toBe('x...');
+  });
+  it('only plain rows make bingo lines', () => {
+    expect(hasLines({ bingo: true })).toBe(true);
+    expect(hasLines({ bingo: true, layout: 'path' })).toBe(false);
+    expect(hasLines({ bingo: false })).toBe(false);
   });
 });

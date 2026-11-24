@@ -44,6 +44,10 @@ export interface TemplateContext {
   tracker: (name: string) => string;
   /** Ids of the user's active trackers, in their own order. */
   trackerIds: string[];
+  /** The year a yearly page is for: asked for when the template `asks` for a year, otherwise the usual one (domain/newYear.ts). */
+  year: number;
+  /** The first day of the month a monthly page is for: asked for when the template `asks` for a month. */
+  month: Date;
 }
 
 export interface BuiltInTemplate {
@@ -54,6 +58,8 @@ export interface BuiltInTemplate {
   size: PageSize;
   /** Tracker presets (by name) this page shows. Missing ones are created on use. */
   needs?: string[];
+  /** The page shows a year or a month: making it asks "For which year?" or "For which month?" first. */
+  asks?: 'year' | 'month';
   build: (ctx: TemplateContext) => { background?: PageBackground; elements: PageElement[] };
 }
 
@@ -117,6 +123,8 @@ export const frame = (x: number, y: number, w: number, h: number, rotation = 0, 
 export const month = (x: number, y: number, w: number, h: number, color: string, d: Date): MonthElement => ({
   id: newId(), type: 'month', x, y, w, h, rotation: 0, color, year: d.getFullYear(), month: d.getMonth(), notes: {},
 });
+/** A small calendar of a month: day numbers only. */
+export const miniMonth = (x: number, y: number, w: number, h: number, color: string, d: Date): MonthElement => ({ ...month(x, y, w, h, color, d), mini: true });
 export const tape = (x: number, y: number, w: number, color: string, pattern: TapePattern, rotation = -3): TapeElement => ({
   id: newId(), type: 'tape', x, y, w, h: 46, rotation, color, pattern, edge: 'torn',
 });

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { draftFromPreset, PRESETS } from '../data/defaults';
 import { useActiveTrackers } from '../data/hooks';
 import { useStore } from '../data/store';
+import { defaultMonth, defaultYear, planningYear } from '../domain/newYear';
 import { lastEdited, PAGE_DIMS, type Page, type PageSize } from '../domain/pages';
 import type { BuiltInTemplate, TemplateContext } from '../templates/library';
+import { makePage } from '../templates/make';
 import { findTemplates, matchesQuery, subjectsOf } from '../templates/search';
 import { TEMPLATE_GROUPS } from '../templates/subjects';
 import { PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
 import { PageCard, THUMB } from './Journal';
+import { SetUpYearSheet, WhenSheet } from './NewYear';
 import { TemplatePreview } from './TemplatePreview';
 
 // The Templates screen. With a few hundred templates it has to stay light:
@@ -55,6 +57,9 @@ function LazyThumb({ page, size }: { page: () => Page; size: PageSize }) {
   return <div ref={ref} className="pg is-thumb is-waiting" style={{ width, height: (PAGE_DIMS[size].h * width) / PAGE_DIMS[size].w }} />;
 }
 
+/** The templates of the "Plan <year>" collection, in the order "Set up" makes them. */
+const PLAN_IDS = ['divider-year', 'year-goals-areas', 'year-goals-12', 'year-goals-steps', 'year-word', 'year-glance', 'year-bingo', 'goals', 'year-letter'];
+
 export function Templates() {
   const navigate = useNavigate();
   const library = useLibrary();
@@ -67,6 +72,7 @@ export function Templates() {
   const [group, setGroup] = useState('All');
   const [subject, setSubject] = useState('All');
   const [query, setQuery] = useState('');
+  const today = useMemo(() => new Date(), []);
 
   const byName = (name: string) => useStore.getState().trackers.find((t) => !t.archived && t.name.trim().toLowerCase() === name.toLowerCase());
   /** Trackers this template shows that don't exist yet. */
@@ -74,30 +80,37 @@ export function Templates() {
 
   // previews are built one at a time, when their card is first drawn, and kept until the trackers change
   const previews = useMemo(() => new Map<string, Page>(), [trackers, weekStartsOn, library]);
-  const preview = (t: BuiltInTemplate) => {
-    let page = previews.get(t.id);
+  const preview = (t: BuiltInTemplate, year = defaultYear(today)) => {
+    const key = `${t.id}@${year}`;
+    let page = previews.get(key);
     if (!page && library) {
-      const ctx: TemplateContext = { today: new Date(), weekStartsOn, tracker: (name) => byName(name)?.id ?? '', trackerIds: trackers.map((x) => x.id) };
+      const ctx: TemplateContext = { today, weekStartsOn, tracker: (name) => byName(name)?.id ?? '', trackerIds: trackers.map((x) => x.id), year, month: year === defaultYear(today) ? defaultMonth(today) : new Date(year, 0, 1) };
       page = library.buildTemplatePage(t, ctx);
-      previews.set(t.id, page);
+      previews.set(key, page);
     }
     return page!;
   };
 
-  const use = (t: BuiltInTemplate, fromPreview = false) => {
+  // ----- making a page: a template for a year or a month asks which one first
+  const [asking, setAsking] = useState<{ t: BuiltInTemplate; fromPreview: boolean } | null>(null);
+  const make = (t: BuiltInTemplate, fromPreview: boolean, when: { year?: number; month?: Date } = {}) => {
     if (!library) return;
-    const { createTracker } = useStore.getState();
-    // a page that shows a tracker needs that tracker: reuse one with the same name, or add it
-    const tracker = (name: string) => (byName(name) ?? createTracker(draftFromPreset(PRESETS.find((p) => p.name === name)))).id;
-    const page = library.buildTemplatePage(t, { today: new Date(), weekStartsOn, tracker, trackerIds: trackers.map((x) => x.id) });
-    const saved = createPage(t.name, t.size, page, false);
+    const saved = makePage(library, t, when);
     // from the preview, the new page takes the preview's place, so Back returns to the templates
     navigate(`/journal/${saved.id}`, { replace: fromPreview });
   };
+  const use = (t: BuiltInTemplate, fromPreview = false) => (t.asks ? setAsking({ t, fromPreview }) : make(t, fromPreview));
 
   const sections = useMemo(() => (library ? findTemplates(library.BUILT_IN_TEMPLATES, { query, group, subject }) : []), [library, query, group, subject]);
+
   const myMatches = mine.filter((t) => matchesQuery(query, t.title || 'Untitled page'));
   const nothing = Boolean(library) && sections.length === 0 && myMatches.length === 0;
+
+  // ----- "Plan <year>": from December 1 to January 31
+  const planYear = planningYear(today);
+  const [settingUp, setSettingUp] = useState(false);
+  const planTemplates = useMemo(() => (library && planYear ? PLAN_IDS.map((id) => library.BUILT_IN_TEMPLATES.find((t) => t.id === id)).filter((t): t is BuiltInTemplate => Boolean(t)) : []), [library, planYear]);
+  const showPlan = planYear !== null && !query.trim() && group === 'All';
 
   // ----- the preview: which template, and which ones the arrows and swipes move through
   const [params, setParams] = useSearchParams();
@@ -125,6 +138,32 @@ export function Templates() {
     return sections.find((s) => s.subject === previewed.subject)?.templates ?? [previewed];
   }, [previewed, query, sections]);
 
+  const card = (t: BuiltInTemplate, year?: number) => {
+    const needs = missing(t);
+    return (
+      <article key={t.id} className="page-card">
+        <button className="page-card-link" onClick={() => openPreview(t)} aria-label={`Preview the ${t.name} template`}>
+          <LazyThumb page={() => preview(t, year)} size={t.size} />
+        </button>
+        <div className="page-card-text">
+          <strong>{t.name}</strong>
+          <small className="muted">
+            {t.description}
+            {needs.length > 0 && ` Adds a ${needs.join(' and ')} tracker.`}
+          </small>
+        </div>
+        <div className="page-card-actions">
+          <button className="btn btn-small" onClick={() => use(t)} aria-label={`Use the ${t.name} template`}>
+            Use
+          </button>
+          <button className="btn btn-small btn-quiet" onClick={() => navigate(`/export?template=${t.id}`)} aria-label={`Print the ${t.name} template blank`}>
+            Print blank
+          </button>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <>
       <PageHeader title="Templates" sub="Start a page from one of these, then make it yours" />
@@ -135,6 +174,23 @@ export function Templates() {
         </label>
         <input id="template-search" type="search" placeholder="Search templates: bingo, birthday, January…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
+
+      {showPlan && planYear !== null && (
+        <section className="group plan-year" aria-labelledby="plan-year-title">
+          <div className="plan-year-head">
+            <div>
+              <h2 className="group-title" id="plan-year-title">
+                Plan {planYear}
+              </h2>
+              <p className="muted">Everything for a fresh year: goals, a word, the year at a glance, a bingo and a page for every month.</p>
+            </div>
+            <button className="btn btn-primary" onClick={() => setSettingUp(true)}>
+              Set up {planYear}
+            </button>
+          </div>
+          <div className="page-grid">{planTemplates.map((t) => card(t, planYear))}</div>
+        </section>
+      )}
 
       {myMatches.length > 0 && (
         <section className="group">
@@ -197,33 +253,7 @@ export function Templates() {
       {sections.map(({ subject: name, templates }) => (
         <section className="group" key={name}>
           <h2 className="group-title">{name}</h2>
-          <div className="page-grid">
-            {templates.map((t) => {
-              const needs = missing(t);
-              return (
-                <article key={t.id} className="page-card">
-                  <button className="page-card-link" onClick={() => openPreview(t)} aria-label={`Preview the ${t.name} template`}>
-                    <LazyThumb page={() => preview(t)} size={t.size} />
-                  </button>
-                  <div className="page-card-text">
-                    <strong>{t.name}</strong>
-                    <small className="muted">
-                      {t.description}
-                      {needs.length > 0 && ` Adds a ${needs.join(' and ')} tracker.`}
-                    </small>
-                  </div>
-                  <div className="page-card-actions">
-                    <button className="btn btn-small" onClick={() => use(t)} aria-label={`Use the ${t.name} template`}>
-                      Use
-                    </button>
-                    <button className="btn btn-small btn-quiet" onClick={() => navigate(`/export?template=${t.id}`)} aria-label={`Print the ${t.name} template blank`}>
-                      Print blank
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <div className="page-grid">{templates.map((t) => card(t))}</div>
         </section>
       ))}
 
@@ -240,6 +270,19 @@ export function Templates() {
           onPrint={(t) => navigate(`/export?template=${t.id}`)}
         />
       )}
+      {asking && (
+        <WhenSheet
+          template={asking.t}
+          onClose={() => setAsking(null)}
+          onMake={(when) => {
+            const { t, fromPreview } = asking;
+            setAsking(null);
+            make(t, fromPreview, when);
+          }}
+        />
+      )}
+      {settingUp && planYear !== null && <SetUpYearSheet year={planYear} onClose={() => setSettingUp(false)} />}
     </>
   );
 }
+

@@ -5,6 +5,7 @@ import { art, month, monthName, paper, tape, title, track, write, type BuiltInTe
 export const weatherTemplates: BuiltInTemplate[] = [
   {
     id: 'weather-year',
+    asks: 'year',
     subject: 'Weather',
     name: 'Weather year in pixels',
     description: "A pixel for every day's weather, in its colour, for the whole year.",
@@ -14,7 +15,7 @@ export const weatherTemplates: BuiltInTemplate[] = [
       background: paper(7, 'dots'),
       elements: [
         tape(56, 44, 220, 'sky', 'dots'),
-        title(60, 62, 620, 'Weather year', {}),
+        title(60, 62, 620, `Weather ${ctx.year}`, {}),
         art(724, 44, 126, 'sun', undefined, 0),
         track(60, 200, 780, ctx.tracker('Weather'), { look: 'pixels', full: true }),
       ],
@@ -33,7 +34,7 @@ export const weatherTemplates: BuiltInTemplate[] = [
         title(50, 30, 760, `${monthName(ctx.today)} weather`),
         art(1030, 20, 120, 'umbrella', undefined, 8),
         month(50, 150, 800, 700, 'sky', ctx.today),
-        track(880, 150, 270, ctx.tracker('Weather')),
+        track(880, 150, 270, ctx.tracker('Weather'), { year: ctx.today.getFullYear(), month: ctx.today.getMonth() }),
         write(880, 730, 270, 120, 'In a few words', 'butter', false),
       ],
     }),

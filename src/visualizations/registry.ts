@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { DateKey, TrackerDefinition, ValueType } from '../domain/types';
 import type { DayMap } from '../domain/stats';
+import type { OpensOn } from '../domain/newYear';
 
 // A visualization is a pure view over a tracker's day summaries. It never
 // reads or writes entries itself. To add a new look (pixel grid, garden…):
@@ -22,6 +23,12 @@ export interface VisualizationProps {
   editing?: boolean;
   /** Small embedding (dashboard widget): draw the essentials, hide the settings. */
   compact?: boolean;
+  /**
+   * A page made for a year or a month: open on that period instead of the
+   * current one (looks that show a period: pixels and calendar). Left out,
+   * the look opens on today, as always.
+   */
+  opensOn?: OpensOn;
 }
 
 export interface VisualizationTemplate {

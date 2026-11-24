@@ -10,6 +10,7 @@ import { EmptyState } from '../ui/Layout';
 import { QuickLog } from '../ui/QuickLog';
 import { configFor, getVisualization } from '../visualizations';
 import { useUi } from '../data/store';
+import { NewMonthCard } from './NewYear';
 
 interface WidgetProps {
   widget: DashboardWidget;
@@ -224,6 +225,8 @@ export function Home() {
           </div>
         )}
       </header>
+
+      <NewMonthCard />
 
       {trackers.length === 0 ? (
         <EmptyState emoji="🌱" title="Your first page is blank">

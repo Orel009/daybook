@@ -157,6 +157,14 @@ export function Settings() {
         </div>
       </section>
 
+      <section className="card form-card">
+        <h2>Home</h2>
+        <button className={`chip ${settings.newMonthCard === false ? '' : 'is-on'}`} role="switch" aria-checked={settings.newMonthCard !== false} onClick={() => updateSettings({ newMonthCard: settings.newMonthCard === false })}>
+          Offer to set up each new month
+        </button>
+        <p className="muted">In the first week of a month, Home shows a card that makes the month's cover and goals page if you want them. No notifications.</p>
+      </section>
+
       <AccountSection />
       <SharingSection />
 

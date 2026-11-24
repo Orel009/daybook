@@ -5,14 +5,17 @@ import { dayColor, usesValueColors } from '../domain/colors';
 import { ValueLegend } from './ValueLegend';
 import { registerVisualization, type VisualizationProps } from './registry';
 
-function CalendarViz({ tracker, days, today, weekStartsOn, onPickDay, compact }: VisualizationProps) {
-  const [month, setMonth] = useState(() => startOfMonth(today));
+function CalendarViz({ tracker, days, today, weekStartsOn, onPickDay, compact, opensOn }: VisualizationProps) {
+  // a page for a month (or a year) opens on its own month; the arrows go forward to today's month, or that one if later
+  const base = opensOn?.date ?? today;
+  const last = startOfMonth(base > today ? base : today);
+  const [month, setMonth] = useState(() => startOfMonth(base));
   const gridStart = startOfWeek(month, weekStartsOn);
   const monthIndex = fromKey(month).getMonth();
   const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   // drop a trailing week that belongs entirely to next month
   const visible = fromKey(cells[35]).getMonth() === monthIndex ? cells : cells.slice(0, 35);
-  const atCurrentMonth = month === startOfMonth(today);
+  const atCurrentMonth = month >= last;
 
   return (
     <div className="cal">

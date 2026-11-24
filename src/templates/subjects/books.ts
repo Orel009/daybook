@@ -93,6 +93,7 @@ export const booksTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'reading-challenge',
+    asks: 'year',
     subject: 'Books',
     name: 'Reading challenge',
     description: 'Forty blank books for the year: write each title on a spine and star it when it’s read.',
@@ -101,7 +102,7 @@ export const booksTemplates: BuiltInTemplate[] = [
       background: paper(9),
       elements: [
         title(60, 56, 680, 'Reading challenge', { size: 62 }),
-        title(62, 150, 780, `${ctx.today.getFullYear()}: forty books. Star each one when you finish it.`, { font: 'clean', size: 26, color: SOFT }),
+        title(62, 150, 780, `${ctx.year}: forty books. Star each one when you finish it.`, { font: 'clean', size: 26, color: SOFT }),
         art(744, 40, 100, 'bookstack', 'rose', 6),
         shelf(60, 206, 780, 944, 40, 10),
       ],

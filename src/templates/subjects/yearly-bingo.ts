@@ -1,11 +1,12 @@
 import { art, list, monthName, paper, sub, tape, tiles, title, write, type BuiltInTemplate } from '../kit';
-import { seasonOf, planYear, SEASON_LOOK, SEASON_BINGO } from '../shared';
+import { seasonOf, SEASON_LOOK, SEASON_BINGO } from '../shared';
 
 // Yearly bingo: ready-made pages.
 
 export const yearlyBingoTemplates: BuiltInTemplate[] = [
   {
     id: 'year-bingo',
+    asks: 'year',
     subject: 'Yearly bingo',
     name: 'Year bingo',
     description: 'A 5×5 bingo of goals for the year, with a free centre. Tap a goal when you reach it.',
@@ -14,7 +15,7 @@ export const yearlyBingoTemplates: BuiltInTemplate[] = [
       background: paper(8, 'dots'),
       elements: [
         tape(56, 40, 260, 'lilac', 'confetti'),
-        title(60, 60, 620, `${planYear(ctx.today)} Bingo`),
+        title(60, 60, 620, `${ctx.year} Bingo`),
         art(722, 40, 128, 'sparkle', 'butter', 8),
         sub(62, 160, 620, '24 goals for the year. Get a line!'),
         tiles(60, 230, 780, 820, '', 'lilac', 5, 25, { bingo: true, freeCenter: true, mark: 'stamp' }),
@@ -24,6 +25,7 @@ export const yearlyBingoTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'year-bingo-4',
+    asks: 'year',
     subject: 'Yearly bingo',
     name: 'Year bingo, 4×4',
     description: 'Sixteen goals for the year on a smaller card, with a note for each line you finish.',
@@ -32,7 +34,7 @@ export const yearlyBingoTemplates: BuiltInTemplate[] = [
       background: paper(6, 'grid'),
       elements: [
         tape(56, 40, 240, 'mint', 'gingham'),
-        title(60, 60, 620, `${planYear(ctx.today)} goals bingo`, { size: 60 }),
+        title(60, 60, 620, `${ctx.year} goals bingo`, { size: 60 }),
         art(724, 40, 126, 'star', 'butter', -8),
         tiles(60, 200, 780, 760, '', 'teal', 4, 16, { bingo: true, mark: 'cross' }),
         write(60, 990, 380, 170, 'Why these goals', 'mint'),

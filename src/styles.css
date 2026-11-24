@@ -1388,3 +1388,24 @@ button.pp-seg { cursor: pointer; }
   .tp-head { padding: 18px 22px 10px; }
   .tp-tools, .tp-foot { padding-left: 22px; padding-right: 22px; }
 }
+
+/* ---------- a small month (twelve on a page): day numbers only ---------- */
+.pp-month.is-mini { border-radius: 12px; }
+.pp-month.is-mini .pp-head { padding: 2px 10px 3px; font-size: 20px; text-align: center; }
+.pp-month.is-mini .pp-th { padding: 1px 0; font-size: 13px; border-right-color: transparent; border-bottom-width: 1.5px; }
+.pp-month.is-mini .pp-td { padding: 0; border-color: transparent; }
+.pp-month.is-mini .pp-td.is-off { background: none; }
+.pp-month.is-mini .pp-day { align-items: center; justify-content: center; }
+.pp-month.is-mini .pp-day b { align-self: center; min-width: 0; padding: 0 3px; border-radius: 6px; font-size: 15px; font-weight: 700; }
+
+/* ---------- new year, new month ---------- */
+.tick-list { display: grid; gap: 4px; }
+.tick-row { display: flex; align-items: center; gap: 12px; min-height: 46px; font-weight: 700; cursor: pointer; }
+.tick-row input { flex: none; width: 26px; height: 26px; margin: 0; accent-color: var(--ink); }
+.tick-sub { margin: 0 0 6px 38px; }
+.plan-year { padding: 16px 18px 18px; border: 1.5px dashed var(--ink); border-radius: 22px; background: var(--raised); }
+.plan-year-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.plan-year-head .group-title { margin: 0 0 4px; }
+.new-month { display: grid; gap: 10px; margin-bottom: 18px; border-style: dashed; }
+.new-month h2 { font-size: 1.25rem; }
+

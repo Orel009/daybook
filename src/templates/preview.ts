@@ -1,6 +1,7 @@
 import { draftFromPreset, PRESETS } from '../data/defaults';
 import type { TrackerDefinition, TrackerEntry } from '../domain/types';
 import type { PageSource } from '../ui/PageCanvas';
+import { defaultMonth, defaultYear } from '../domain/newYear';
 import type { BuiltInTemplate, TemplateContext } from './kit';
 
 // Showing a template without making anything: for the preview and for
@@ -30,6 +31,9 @@ export interface PreviewOptions {
   entries: TrackerEntry[];
   /** Show the user's own trackers with what they logged; otherwise every tracker is shown empty. */
   withData: boolean;
+  /** For templates that ask: the year and the month. Left out, the ones a page made today would get. */
+  year?: number;
+  month?: Date;
 }
 
 /**
@@ -43,6 +47,8 @@ export function previewOf(o: PreviewOptions): { ctx: TemplateContext; source: Pa
     weekStartsOn: o.weekStartsOn,
     tracker: (name) => (o.withData ? active.find((t) => sameName(t.name, name))?.id : undefined) ?? `${STAND_IN}${name}`,
     trackerIds: o.withData ? active.map((t) => t.id) : [],
+    year: o.year ?? defaultYear(o.today),
+    month: o.month ?? defaultMonth(o.today),
   };
   const source: PageSource = {
     photos: { ns: 'preview', load: async () => undefined },

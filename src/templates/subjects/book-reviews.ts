@@ -75,6 +75,7 @@ export const bookReviewsTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'review-year-wall',
+    asks: 'year',
     subject: 'Book reviews',
     name: 'Books of the year',
     description: 'A wall of twelve cover slots with stars under each: the year in books at one glance.',
@@ -83,7 +84,7 @@ export const bookReviewsTemplates: BuiltInTemplate[] = [
       background: paper(4, 'plain'),
       elements: [
         title(60, 54, 580, 'Books of the year', { size: 58 }),
-        title(650, 40, 190, String(ctx.today.getFullYear()), { font: 'tall', size: 110, align: 'right' }),
+        title(650, 40, 190, String(ctx.year), { font: 'tall', size: 110, align: 'right' }),
         ...Array.from({ length: 12 }, (_, i) => {
           const x = 60 + (i % 4) * 200;
           const y = 190 + Math.floor(i / 4) * 330;

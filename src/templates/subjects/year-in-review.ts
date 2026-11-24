@@ -7,6 +7,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export const yearInReviewTemplates: BuiltInTemplate[] = [
   {
     id: 'year-review',
+    asks: 'year',
     subject: 'Year in review',
     name: 'Year in review',
     description: 'Highlights, lessons, two photos, what you are grateful for and what you want next year.',
@@ -15,7 +16,7 @@ export const yearInReviewTemplates: BuiltInTemplate[] = [
       background: paper(4),
       elements: [
         title(60, 54, 580, 'Year in review', { size: 66 }),
-        title(650, 40, 190, String(ctx.today.getFullYear()), { font: 'tall', size: 110, align: 'right' }),
+        title(650, 40, 190, String(ctx.year), { font: 'tall', size: 110, align: 'right' }),
         list(60, 190, 380, 'Highlights', 'butter', 5),
         list(460, 190, 380, 'Lessons', 'mint', 5),
         frame(60, 540, 370, 300, -2, { style: 'polaroid' }),

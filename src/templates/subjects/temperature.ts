@@ -5,6 +5,7 @@ import { art, monthName, paper, table, tape, title, track, type BuiltInTemplate 
 export const temperatureTemplates: BuiltInTemplate[] = [
   {
     id: 'temp-blanket-c',
+    asks: 'year',
     subject: 'Temperature',
     name: 'Temperature blanket (°C)',
     description: "Each day's high as a coloured pixel, coldest blue to hottest red: a year-long temperature blanket.",
@@ -14,7 +15,7 @@ export const temperatureTemplates: BuiltInTemplate[] = [
       background: paper(0, 'grid'),
       elements: [
         tape(56, 44, 240, 'coral', 'rainbow'),
-        title(60, 62, 640, 'Temperature blanket', { size: 50 }),
+        title(60, 62, 640, `Temperature blanket ${ctx.year}`, { size: 46 }),
         art(724, 44, 126, 'mitten', 'blue', 8),
         track(60, 200, 780, ctx.tracker('Temperature (°C)'), { look: 'pixels', full: true }),
       ],
@@ -22,6 +23,7 @@ export const temperatureTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'temp-blanket-f',
+    asks: 'year',
     subject: 'Temperature',
     name: 'Temperature blanket (°F)',
     description: "Each day's high as a coloured pixel in Fahrenheit bands: a year-long temperature blanket.",
@@ -31,7 +33,7 @@ export const temperatureTemplates: BuiltInTemplate[] = [
       background: paper(0, 'grid'),
       elements: [
         tape(56, 44, 240, 'orange', 'rainbow'),
-        title(60, 62, 640, 'Temperature blanket', { size: 50 }),
+        title(60, 62, 640, `Temperature blanket ${ctx.year}`, { size: 46 }),
         art(724, 44, 126, 'sun', undefined, 0),
         track(60, 200, 780, ctx.tracker('Temperature (°F)'), { look: 'pixels', full: true }),
       ],

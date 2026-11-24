@@ -156,6 +156,14 @@ export interface TrackerElement extends ElementBase {
   look?: string;
   /** Full version with its colour key and week/month/year switch, not the small widget. */
   full?: boolean;
+  /**
+   * The year the page is for (a page made for 2027 shows 2027), set when a page
+   * is made for a chosen year or month. Left out, the part follows the
+   * current date, as every part made before this did.
+   */
+  year?: number;
+  /** With `year`: the month the page is for (0 = January). */
+  month?: number;
 }
 
 // ----- parts that are written in while editing, and ticked while viewing
@@ -219,6 +227,8 @@ export interface MonthElement extends ElementBase, PartTextStyle {
   year: number;
   month: number; // 0–11
   notes: Record<string, string>; // day of month -> text
+  /** A small calendar to look at: only the day numbers, for twelve months on one page. */
+  mini?: boolean;
 }
 
 export interface ShelfBook {

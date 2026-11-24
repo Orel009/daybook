@@ -25,11 +25,19 @@ const dayMonth = (k: DateKey) => fromKey(k).toLocaleDateString(LOCALE, { month: 
  * Trackers with a colour per answer (mood, ratings) use that colour; the rest
  * use the tracker colour, lighter for partly done days.
  */
-function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onConfigChange, compact }: VisualizationProps) {
+function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onConfigChange, compact, opensOn }: VisualizationProps) {
   const saved: RangeId = RANGES.some((r) => r.id === config.range) ? (config.range as RangeId) : 'year';
-  const [range, setRange] = useState<RangeId>(saved);
-  const [back, setBack] = useState(0); // how many periods before the current one
-  useEffect(() => setRange(saved), [saved]);
+  // a page for a year opens on that year, a page for a month on that month
+  const [range, setRange] = useState<RangeId>(opensOn?.span ?? saved);
+  const [back, setBack] = useState(0); // how many periods before the one it opened on
+  useEffect(() => {
+    if (!opensOn) setRange(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved]);
+  // where it opens (today, or the page's own period), and how far forward the arrows go:
+  // up to today's period, or the page's own if that is later
+  const base = opensOn?.date ?? today;
+  const limit = base > today ? base : today;
 
   const choose = (r: RangeId) => {
     setRange(r);
@@ -69,10 +77,12 @@ function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onCon
 
   let title: string;
   let grid: ReactNode;
+  let atEnd: boolean;
 
   if (range === 'year') {
-    const year = fromKey(today).getFullYear() - back;
+    const year = fromKey(base).getFullYear() - back;
     title = String(year);
+    atEnd = year >= fromKey(limit).getFullYear();
     grid = (
       <div className="px-year" role="grid" aria-label={`${tracker.name}, ${year}`}>
         <span className="px-corner" aria-hidden="true" />
@@ -93,7 +103,8 @@ function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onCon
       </div>
     );
   } else if (range === 'month') {
-    const first = addMonths(startOfMonth(today), -back);
+    const first = addMonths(startOfMonth(base), -back);
+    atEnd = first >= startOfMonth(limit);
     const length = new Date(fromKey(first).getFullYear(), fromKey(first).getMonth() + 1, 0).getDate();
     const lead = (fromKey(first).getDay() - weekStartsOn + 7) % 7;
     const slots = Array.from({ length: Math.ceil((lead + length) / 7) * 7 }, (_, i) => (i >= lead && i < lead + length ? addDays(first, i - lead) : null));
@@ -109,7 +120,8 @@ function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onCon
       </div>
     );
   } else {
-    const start = addDays(startOfWeek(today, weekStartsOn), -7 * back);
+    const start = addDays(startOfWeek(base, weekStartsOn), -7 * back);
+    atEnd = start >= startOfWeek(limit, weekStartsOn);
     const week = Array.from({ length: 7 }, (_, i) => addDays(start, i));
     title = `${dayMonth(week[0])} to ${dayMonth(week[6])}`;
     grid = (
@@ -140,7 +152,7 @@ function PixelViz({ tracker, days, today, weekStartsOn, config, onPickDay, onCon
               ‹
             </button>
             <strong aria-live="polite">{title}</strong>
-            <button type="button" className="icon-btn" onClick={() => setBack(back - 1)} disabled={back === 0} aria-label={`Next ${range}`}>
+            <button type="button" className="icon-btn" onClick={() => setBack(back - 1)} disabled={atEnd} aria-label={`Next ${range}`}>
               ›
             </button>
           </div>

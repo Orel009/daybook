@@ -96,6 +96,7 @@ export const memoriesTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'year-in-memories',
+    asks: 'year',
     subject: 'Memories',
     name: 'A year of memories',
     description: 'One box for each month: the moment you want to remember from it.',
@@ -106,7 +107,7 @@ export const memoriesTemplates: BuiltInTemplate[] = [
       return {
         background: paper(9),
         elements: [
-          title(60, 50, 760, `${ctx.today.getFullYear()} in memories`),
+          title(60, 50, 760, `${ctx.year} in memories`),
           ...months.map((m, i) => write(60 + (i % 3) * 265, 196 + Math.floor(i / 3) * 240, 250, 226, m, colors[i % colors.length])),
         ],
       };

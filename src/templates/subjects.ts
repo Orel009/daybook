@@ -8,13 +8,13 @@ export const TEMPLATE_SUBJECTS = [
   'Weather', 'Temperature', 'Self-care', 'Travel', 'Home', 'Family', 'Holidays',
   'Months', 'Book reviews', 'Challenges', 'Study', 'Language learning', 'Plants', 'Mindset', 'Bullet journal',
   'Recipes', 'Pets', 'Kids', 'Relationship', 'Music and podcasts', 'Hobbies and crafts', 'Friends', 'Quotes',
-  'Year in review', 'Wishlist', 'Events and parties', 'Productivity', 'Scrapbook', 'Dividers',
+  'Year in review', 'Wishlist', 'Events and parties', 'Productivity', 'Scrapbook', 'Dividers', 'New year',
 ] as const;
 export type TemplateSubject = (typeof TEMPLATE_SUBJECTS)[number];
 
 /** Subjects in a few groups, so the subject chips stay short. Every subject is in exactly one. */
 export const TEMPLATE_GROUPS: { name: string; subjects: TemplateSubject[] }[] = [
-  { name: 'Plan', subjects: ['Planning', 'Productivity', 'Goals', 'Money', 'Travel', 'Events and parties', 'Holidays'] },
+  { name: 'Plan', subjects: ['Planning', 'Productivity', 'Goals', 'New year', 'Money', 'Travel', 'Events and parties', 'Holidays'] },
   { name: 'Track', subjects: ['Habits', 'Sleep', 'Water', 'Food', 'Sports and fitness', 'Weather', 'Temperature', 'Series'] },
   { name: 'Journal', subjects: ['Bullet journal', 'Birthdays', 'Quotes', 'Year in review'] },
   { name: 'Challenges', subjects: ['Challenges', 'Yearly bingo', 'Book bingo', 'Alphabet challenge', 'Movie challenge'] },
@@ -27,4 +27,4 @@ export const TEMPLATE_GROUPS: { name: string; subjects: TemplateSubject[] }[] = 
 ];
 
 /** How many ready-made templates there are, for screens that mention the number without loading them. */
-export const TEMPLATE_COUNT = 258;
+export const TEMPLATE_COUNT = 266;

@@ -94,6 +94,10 @@ export interface Settings {
   dashboard: DashboardWidget[];
   /** "My stickers": the user's own pictures, kept for reuse on any page. */
   customStickers?: { assetId: string; ratio: number }[];
+  /** Home's "New month" card in the first week of a month. On unless switched off. */
+  newMonthCard?: boolean;
+  /** The month (YYYY-MM) whose "New month" card was dismissed. */
+  dismissedMonth?: string;
   updatedAt: string;
 }
 

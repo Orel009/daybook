@@ -61,6 +61,7 @@ import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, typ
 import { scrollerOf, themeAccent } from '../ui/dom';
 import { bendLine, flipLine, isCurved, linePoints, middle, moveLinePoint, straightenLine, type Pt } from '../domain/line';
 import { shapeWeight } from '../domain/shapes';
+import { LOCALE } from '../domain/dates';
 import { ShapeOutline } from '../ui/PageDrawing';
 
 type Mode = 'move' | 'resize' | 'width' | 'rotate';
@@ -1229,6 +1230,28 @@ function PageEditor({ stored }: { stored: Page }) {
           )}
 
           {selected.type === 'tracker' && <p className="muted">Shows this tracker live, in the look chosen for it. Tap it outside editing to log.</p>}
+          {selected.type === 'tracker' && selected.year !== undefined && (
+            <div className="pe-row">
+              <span className="muted">
+                Opens on {selected.month === undefined ? selected.year : new Date(selected.year, selected.month, 1).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })}, the {selected.month === undefined ? 'year' : 'month'} this page is for.
+              </span>
+              <button
+                className="btn btn-small"
+                onClick={() =>
+                  change((p) => ({
+                    ...p,
+                    elements: p.elements.map((e) => {
+                      if (e.id !== selected.id || e.type !== 'tracker') return e;
+                      const { year: _y, month: _m, ...rest } = e;
+                      return rest;
+                    }),
+                  }))
+                }
+              >
+                Follow today instead
+              </button>
+            </div>
+          )}
 
           {selected.rotation !== 0 && (
             <button className="btn btn-quiet btn-small" onClick={() => patchEl(selected.id, { rotation: 0 })}>

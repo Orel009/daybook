@@ -24,6 +24,7 @@ export const moodTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'mood-pixels',
+    asks: 'year',
     subject: 'Mood',
     name: 'Mood, year in pixels',
     description: 'One square for every day of the year, each mood in its own colour.',
@@ -32,7 +33,7 @@ export const moodTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(1),
       elements: [
-        title(60, 44, 760, 'Year in pixels'),
+        title(60, 44, 760, `${ctx.year} in pixels`),
         tape(600, 72, 240, 'lilac', 'confetti', 4),
         track(60, 160, 780, ctx.tracker('Mood'), { look: 'pixels', full: true }),
       ],

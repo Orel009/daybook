@@ -4,8 +4,6 @@ import type { TapePattern } from '../domain/pages';
 
 export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 export const seasonOf = (d: Date): Season => (['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'] as const)[d.getMonth()];
-/** The year a yearly page is for: next year from October on. */
-export const planYear = (d: Date) => (d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear());
 export const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
 
 export const SEASON_LOOK: Record<Season, { name: string; paper: number; colors: [string, string, string]; art: [string, string, string]; tape: [TapePattern, TapePattern] }> = {

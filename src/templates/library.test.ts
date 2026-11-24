@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PRESETS } from '../data/defaults';
+import { defaultMonth, defaultYear, EVERYTHING, MONTH_GOAL_STYLES, planForMonth, planForYear, YEAR_GOAL_STYLES } from '../domain/newYear';
 import { isCurved, linePoints, type Pt } from '../domain/line';
 import { PAGE_DIMS, type LineElement, type PageElement, type ShapeElement, type WritingElement } from '../domain/pages';
 import { circleOf } from '../domain/shapes';
@@ -9,7 +10,7 @@ import { findTemplates, matchesQuery, subjectsOf } from './search';
 import { TEMPLATE_COUNT, TEMPLATE_GROUPS, TEMPLATE_SUBJECTS } from './subjects';
 import { monthOfTemplate } from './subjects/months';
 
-const ctx = (today: Date, weekStartsOn = 0): TemplateContext => ({ today, weekStartsOn, tracker: () => '', trackerIds: [] });
+const ctx = (today: Date, weekStartsOn = 0, year = defaultYear(today), month = defaultMonth(today)): TemplateContext => ({ today, weekStartsOn, tracker: () => '', trackerIds: [], year, month });
 const names = (sections: { templates: { name: string }[] }[]) => sections.flatMap((s) => s.templates.map((t) => t.name));
 
 describe('the template library', () => {
@@ -241,5 +242,101 @@ describe('circles of control', () => {
     const heads = (id: string) => ofType(page(id).elements, 'writing').filter((w) => !w.bare).map((w) => w.title);
     expect(heads('mind-control')).toEqual(['Where I will put my energy', 'What I am letting go of']);
     expect(heads('mind-control-two')).toEqual(['My energy goes to', 'I am letting go of']);
+  });
+});
+
+// ----- pages for a year or a month
+
+describe('templates that show a year or a month', () => {
+  const today = new Date(2026, 5, 15);
+  const texts = (els: PageElement[]) => els.flatMap((e) => [e.type === 'text' ? e.text : '', 'title' in e && typeof e.title === 'string' ? e.title : '']).join(' | ');
+  it('a template that asks for a year writes that year on its page, and its page title says it', () => {
+    const asking = BUILT_IN_TEMPLATES.filter((t) => t.asks === 'year');
+    expect(asking.length).toBeGreaterThanOrEqual(15);
+    for (const t of asking) {
+      const made = buildTemplatePage(t, ctx(today, 0, 2031));
+      const shown = made.elements.some((e) => e.type === 'month' && e.year === 2031) || texts(made.elements).includes('2031');
+      expect(shown, `${t.name} shows 2031`).toBe(true);
+      expect(made.title, t.name).toBe(`${t.name} 2031`);
+      expect(texts(made.elements).includes('2026'), `${t.name} does not also show this year`).toBe(false);
+    }
+  });
+  it('no other template writes a year it was not asked for (months keep their own rule)', () => {
+    for (const t of BUILT_IN_TEMPLATES.filter((x) => !x.asks && x.subject !== 'Months')) {
+      const made = buildTemplatePage(t, ctx(today, 0, 2031));
+      expect(texts(made.elements).includes('2031'), t.name).toBe(false);
+      expect(/\b20[2-9]\d\b/.test(texts(made.elements)), `${t.name} writes a year without asking`).toBe(false);
+      expect(made.title).toBe(t.name);
+    }
+  });
+  it('a template that asks for a month writes that month, in the year it falls in', () => {
+    const asking = BUILT_IN_TEMPLATES.filter((t) => t.asks === 'month');
+    expect(asking.map((t) => t.id).sort()).toEqual(['bills', 'budget', 'goals', 'goals-month-focus', 'goals-month-weeks', 'no-spend', 'spending']);
+    for (const t of asking) {
+      const january = buildTemplatePage(t, ctx(new Date(2026, 11, 28), 0, 2027, new Date(2027, 0, 1)));
+      // a month written in a heading, or a month part showing it
+      expect(texts(january.elements).includes('January') || january.elements.some((e) => e.type === 'month' && e.year === 2027 && e.month === 0), t.name).toBe(true);
+      expect(texts(january.elements).includes('December'), t.name).toBe(false);
+      expect(january.elements.some((e) => e.type === 'month' && !(e.year === 2027 && e.month === 0)), `${t.name}: no month part for another month`).toBe(false);
+      expect(january.title, t.name).toBe(`${t.name}: January 2027`);
+    }
+  });
+  it('the usual year is this year, or next year from November 1', () => {
+    const bingo = BUILT_IN_TEMPLATES.find((t) => t.id === 'year-bingo')!;
+    expect(texts(buildTemplatePage(bingo, ctx(new Date(2026, 9, 31))).elements)).toContain('2026 Bingo');
+    expect(texts(buildTemplatePage(bingo, ctx(new Date(2026, 10, 1))).elements)).toContain('2027 Bingo');
+    expect(texts(buildTemplatePage(bingo, ctx(new Date(2027, 0, 1))).elements)).toContain('2027 Bingo');
+  });
+  it('the year at a glance has twelve small months of that year, in order, leap year or not', () => {
+    const glance = BUILT_IN_TEMPLATES.find((t) => t.id === 'year-glance')!;
+    for (const year of [2027, 2028]) {
+      const months = ofType(buildTemplatePage(glance, ctx(today, 0, year)).elements, 'month');
+      expect(months.map((m) => m.month)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+      expect(months.every((m) => m.year === year && m.mini === true)).toBe(true);
+      // none over another, all on the sheet
+      for (const a of months) for (const b of months) if (a !== b) expect(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y).toBe(true);
+    }
+  });
+  it('there are three styles of yearly goals and three of monthly goals, and "Set up" knows them all', () => {
+    for (const s of [...YEAR_GOAL_STYLES, ...MONTH_GOAL_STYLES]) expect(BUILT_IN_TEMPLATES.some((t) => t.id === s.id), s.id).toBe(true);
+    expect(YEAR_GOAL_STYLES.every((s) => BUILT_IN_TEMPLATES.find((t) => t.id === s.id)!.asks === 'year')).toBe(true);
+    expect(MONTH_GOAL_STYLES.every((s) => BUILT_IN_TEMPLATES.find((t) => t.id === s.id)!.asks === 'month')).toBe(true);
+  });
+  it('everything "Set up <year>" and the new month card make exists, and is made for the right year and month', () => {
+    const made = [...planForYear(2028, EVERYTHING), ...planForMonth(new Date(2028, 1, 1), 'goals-month-weeks')].map((p) => {
+      const t = BUILT_IN_TEMPLATES.find((x) => x.id === p.templateId);
+      expect(t, p.templateId).toBeDefined();
+      return buildTemplatePage(t!, ctx(new Date(2027, 11, 20), 0, p.year, p.month ?? new Date(p.year, 0, 1)));
+    });
+    expect(made.length).toBe(20);
+    expect(made[0].title).toBe('Year divider 2028');
+    expect(made[5].title).toBe('Mood, year in pixels 2028');
+    expect(made.slice(6, 18).map((p) => p.title)).toEqual(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m) => `Monthly goals: ${m} 2028`));
+    expect(made[19].title).toBe('Monthly goals, week by week: February 2028');
+  });
+  it('a page made for a year or a month pins every tracker part on it to that period', () => {
+    let pinned = 0;
+    for (const t of BUILT_IN_TEMPLATES.filter((x) => x.asks)) {
+      const made = buildTemplatePage(t, { ...ctx(today, 0, 2027, new Date(2027, 2, 1)), tracker: (name) => `id-${name}`, trackerIds: ['a', 'b', 'c'] });
+      for (const part of ofType(made.elements, 'tracker')) {
+        pinned++;
+        expect(part.year, t.name).toBe(2027);
+        expect(part.month, t.name).toBe(t.asks === 'year' ? undefined : 2);
+      }
+    }
+    // the year in pixels pages: Mood, Weather and the two temperature blankets
+    expect(pinned).toBeGreaterThanOrEqual(4);
+  });
+  it('"Weather this month" is for the month it is made in: its tracker opens on that month', () => {
+    const t = BUILT_IN_TEMPLATES.find((x) => x.id === 'weather-month')!;
+    const [part] = ofType(buildTemplatePage(t, ctx(new Date(2026, 10, 24))).elements, 'tracker');
+    expect([part.year, part.month]).toEqual([2026, 10]);
+  });
+  it('no other template pins its tracker parts: they follow today, as they always have', () => {
+    for (const t of BUILT_IN_TEMPLATES.filter((x) => !x.asks && x.id !== 'weather-month')) {
+      for (const part of ofType(buildTemplatePage(t, { ...ctx(today), tracker: (name) => `id-${name}`, trackerIds: ['a', 'b', 'c'] }).elements, 'tracker')) {
+        expect('year' in part || 'month' in part, t.name).toBe(false);
+      }
+    }
   });
 });

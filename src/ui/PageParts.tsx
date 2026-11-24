@@ -257,7 +257,7 @@ export function MonthBody({ el, mode, onChange }: PartProps<MonthElement>) {
   const now = new Date();
   const today = now.getFullYear() === el.year && now.getMonth() === el.month ? now.getDate() : 0;
   return (
-    <div className="pp-panel pp-month" style={textVars(el)}>
+    <div className={`pp-panel pp-month${el.mini ? ' is-mini' : ''}`} style={textVars(el)}>
       <Head title={monthTitle(el.year, el.month)} color={el.color} />
       <div className="pp-grid" style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridTemplateRows: `auto repeat(${weeks}, minmax(0, 1fr))` }}>
         {Array.from({ length: 7 }, (_, i) => (
@@ -271,7 +271,7 @@ export function MonthBody({ el, mode, onChange }: PartProps<MonthElement>) {
           return (
             <div key={i} className={`pp-td pp-day ${day === today ? 'is-today' : ''}`}>
               <b style={day === today ? { background: tint(el.color) } : undefined}>{day}</b>
-              {mode === 'edit' ? (
+              {el.mini ? null : mode === 'edit' ? (
                 <textarea
                   className="pg-input pp-note"
                   value={el.notes[day] ?? ''}

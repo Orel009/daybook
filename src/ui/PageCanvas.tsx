@@ -7,6 +7,7 @@ import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type FrameEleme
 import { isWordTape, tapeImage } from '../domain/tapes';
 import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
 import { buildDayMap } from '../domain/stats';
+import { opensOn } from '../domain/newYear';
 import { configFor, getVisualization } from '../visualizations';
 import { DrawnStickerArt } from '../stickers/drawn';
 import { LineBody, ShapeBody } from './PageDrawing';
@@ -146,7 +147,7 @@ export function CustomStickerBody({ assetId }: { assetId: string }) {
 }
 
 /** A tracker widget on a shared or public page: the owner's data, nothing tappable. */
-function SourceTrackerBody({ source, trackerId, look, full }: { source: PageSource; trackerId: string; look?: string; full?: boolean }) {
+function SourceTrackerBody({ source, trackerId, look, full, year, month }: { source: PageSource } & TrackerProps) {
   const weekStartsOn = useStore((s) => s.settings.weekStartsOn);
   const today = useToday();
   const tracker = source.tracker(trackerId);
@@ -162,17 +163,29 @@ function SourceTrackerBody({ source, trackerId, look, full }: { source: PageSour
           </span>
         </h2>
       </div>
-      <viz.Component tracker={tracker} days={days} today={today} weekStartsOn={weekStartsOn} config={configFor(tracker.visualizationConfig, viz.id)} compact={!full} />
+      <viz.Component key={pinKey(year, month)} tracker={tracker} days={days} today={today} weekStartsOn={weekStartsOn} config={configFor(tracker.visualizationConfig, viz.id)} compact={!full} opensOn={opensOn({ year, month }, today)} />
     </div>
   );
 }
 
-function TrackerBody(props: { trackerId: string; live: boolean; look?: string; full?: boolean }) {
+interface TrackerProps {
+  trackerId: string;
+  live: boolean;
+  look?: string;
+  full?: boolean;
+  /** The year (and month) the page is for: the part opens there. Left out, it follows today. */
+  year?: number;
+  month?: number;
+}
+/** A new pin draws the look afresh, so it opens on the new period. */
+const pinKey = (year?: number, month?: number) => (year === undefined ? 'today' : `${year}-${month ?? ''}`);
+
+function TrackerBody(props: TrackerProps) {
   const source = useContext(PageSourceContext);
   return source ? <SourceTrackerBody source={source} {...props} /> : <OwnTrackerBody {...props} />;
 }
 
-function OwnTrackerBody({ trackerId, live, look, full }: { trackerId: string; live: boolean; look?: string; full?: boolean }) {
+function OwnTrackerBody({ trackerId, live, look, full, year, month }: TrackerProps) {
   const tracker = useStore((s) => s.trackers.find((t) => t.id === trackerId && !t.archived));
   const weekStartsOn = useStore((s) => s.settings.weekStartsOn);
   const openLog = useUi((s) => s.openLog);
@@ -197,9 +210,11 @@ function OwnTrackerBody({ trackerId, live, look, full }: { trackerId: string; li
         {live && <QuickLog tracker={tracker} day={days.get(today)} date={today} />}
       </div>
       <viz.Component
+        key={pinKey(year, month)}
         tracker={tracker}
         days={days}
         today={today}
+        opensOn={opensOn({ year, month }, today)}
         weekStartsOn={weekStartsOn}
         config={configFor(tracker.visualizationConfig, viz.id)}
         onPickDay={live ? (date) => openLog({ trackerId: tracker.id, date }) : undefined}
@@ -254,7 +269,7 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
     case 'frame':
       return <FrameBody el={el} mode={mode} onChange={onChange} />;
     case 'tracker':
-      return <TrackerBody trackerId={el.trackerId} live={live} look={el.look} full={el.full} />;
+      return <TrackerBody trackerId={el.trackerId} live={live} look={el.look} full={el.full} year={el.year} month={el.month} />;
     case 'bookshelf':
       return <BookshelfBody el={el} mode={mode} onChange={onChange} />;
     case 'box':

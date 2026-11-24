@@ -70,16 +70,17 @@ export const dividersTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'divider-year',
+    asks: 'year',
     subject: 'Dividers',
     name: 'Year divider',
-    description: 'The year in huge numbers over a band of colour. Starts with this year.',
+    description: 'The year in huge numbers over a band of colour.',
     size: 'portrait',
     build: (ctx) => ({
       background: paper(8, 'grid'),
       elements: [
         band(-20, 760, 940, 460, 'lilac'),
         tape(-10, 738, 920, 'lilac', 'confetti', 0),
-        title(40, 330, 820, String(ctx.today.getFullYear()), { font: 'round', size: 300, align: 'center' }),
+        title(40, 330, 820, String(ctx.year), { font: 'round', size: 300, align: 'center' }),
         title(40, 820, 820, 'A year in pages', { font: 'hand', size: 76, align: 'center' }),
         art(110, 130, 130, 'moon', 'butter', -12),
         art(670, 150, 110, 'star', 'butter', 10),

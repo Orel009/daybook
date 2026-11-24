@@ -6,6 +6,7 @@ import { art, blank, list, month, paper, sub, table, tape, title, write, type Bu
 export const moneyTemplates: BuiltInTemplate[] = [
   {
     id: 'budget',
+    asks: 'month',
     subject: 'Money',
     name: 'Budget planner',
     description: 'Planned, spent and left for each category, with bills to pay.',
@@ -14,7 +15,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
       background: paper(6, 'grid'),
       elements: [
         title(60, 56, 620, 'Budget'),
-        sub(62, 160, 600, ctx.today.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
+        sub(62, 160, 600, ctx.month.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
         table(60, 230, 780, 500, '', 'mint', ['Planned', 'Spent', 'Left'], ['Home', 'Food', 'Transport', 'Bills', 'Fun', 'Savings', 'Other', 'Total']),
         list(60, 760, 380, 'Bills to pay', 'rose', 4),
         write(460, 760, 380, 390, 'Notes', 'butter'),
@@ -41,6 +42,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'spending',
+    asks: 'month',
     subject: 'Money',
     name: 'Spending log',
     description: 'Every purchase with its amount, and what you noticed at the end.',
@@ -49,7 +51,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
       background: paper(1, 'grid'),
       elements: [
         title(60, 50, 700, 'Spending log'),
-        sub(62, 150, 600, ctx.today.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
+        sub(62, 150, 600, ctx.month.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
         table(60, 210, 780, 770, '', 'peach', ['Date', 'What', 'Amount', 'Needed?'], blank(14)),
         write(60, 1000, 780, 150, 'What I noticed', 'butter'),
       ],
@@ -57,6 +59,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'bills',
+    asks: 'month',
     subject: 'Money',
     name: 'Bills tracker',
     description: 'Every regular bill with its due date, amount and a paid column, plus what’s coming up.',
@@ -65,7 +68,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
       background: paper(6, 'grid'),
       elements: [
         title(60, 50, 640, 'Bills'),
-        sub(62, 150, 600, ctx.today.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
+        sub(62, 150, 600, ctx.month.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })),
         art(730, 44, 110, 'gelt', 'butter', 8),
         table(60, 214, 780, 620, '', 'mint', ['Bill', 'Due', 'Amount', 'Paid'], ['Rent', 'Electricity', 'Water', 'Phone', 'Internet', 'Insurance', 'Subscriptions', '', '']),
         list(60, 856, 380, 'Coming up', 'rose', 4),
@@ -75,6 +78,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
   },
   {
     id: 'no-spend',
+    asks: 'month',
     subject: 'Money',
     name: 'No-spend month',
     description: 'Mark every day without extra spending, set your rules and watch the savings add up.',
@@ -84,7 +88,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
       elements: [
         tape(60, 44, 240, 'mint', 'checker', -3),
         title(60, 60, 700, 'No-spend month'),
-        month(60, 196, 780, 630, 'mint', ctx.today),
+        month(60, 196, 780, 630, 'mint', ctx.month),
         list(60, 850, 380, 'My rules', 'butter', ['Groceries are fine', 'Bills are fine', 'No takeaway', 'No online shopping']),
         write(460, 850, 380, 300, 'Money saved', 'rose'),
       ],

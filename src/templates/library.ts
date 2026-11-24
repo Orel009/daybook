@@ -1,4 +1,6 @@
-import { BG_COLORS, type Page } from '../domain/pages';
+import { LOCALE } from '../domain/dates';
+import { pinFor } from '../domain/newYear';
+import { BG_COLORS, type Page, type PageElement } from '../domain/pages';
 import type { BuiltInTemplate, TemplateContext } from './kit';
 import { planningTemplates } from './subjects/planning';
 import { foodTemplates } from './subjects/food';
@@ -49,6 +51,7 @@ import { eventsAndPartiesTemplates } from './subjects/events-and-parties';
 import { productivityTemplates } from './subjects/productivity';
 import { scrapbookTemplates } from './subjects/scrapbook';
 import { dividersTemplates } from './subjects/dividers';
+import { newYearTemplates } from './subjects/new-year';
 
 // Every ready-made template, in the order of the subjects. The app loads this
 // file (and with it all the templates) only when templates are shown or used.
@@ -105,18 +108,23 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
   ...productivityTemplates,
   ...scrapbookTemplates,
   ...dividersTemplates,
+  ...newYearTemplates,
 ];
 
 /** A complete page from a template. Use `createPage(…, from: thisPage)` to save it. */
 export function buildTemplatePage(t: BuiltInTemplate, ctx: TemplateContext): Page {
   const built = t.build(ctx);
   const now = new Date().toISOString();
+  // a page for a year or a month shows that period's data: its tracker parts open there
+  const pin = pinFor(t.asks, ctx);
+  const elements = pin ? built.elements.map((el): PageElement => (el.type === 'tracker' && el.year === undefined ? { ...el, ...pin } : el)) : built.elements;
   return {
     id: `template-${t.id}`,
-    title: t.name,
+    // a page for a year or a month says which one in its title, so twelve monthly pages can be told apart
+    title: t.asks === 'year' ? `${t.name} ${ctx.year}` : t.asks === 'month' ? `${t.name}: ${ctx.month.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })}` : t.name,
     size: t.size,
     background: built.background ?? { color: BG_COLORS[0], pattern: 'dots' },
-    elements: built.elements,
+    elements,
     isTemplate: false,
     sortOrder: 0,
     createdAt: now,

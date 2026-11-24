@@ -1,5 +1,5 @@
 import { LOCALE } from '../../domain/dates';
-import { art, blank, list, month, paper, sub, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, month, paper, sub, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Money: ready-made pages.
 
@@ -86,7 +86,7 @@ export const moneyTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(5),
       elements: [
-        tape(60, 44, 240, 'mint', 'checker', -3),
+        themed(60, 44, 240, 'coins', -3),
         title(60, 60, 700, 'No-spend month'),
         month(60, 196, 780, 630, 'mint', ctx.month),
         list(60, 850, 380, 'My rules', 'butter', ['Groceries are fine', 'Bills are fine', 'No takeaway', 'No online shopping']),

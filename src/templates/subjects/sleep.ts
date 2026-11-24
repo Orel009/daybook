@@ -1,4 +1,4 @@
-import { art, blank, list, month, paper, sub, table, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, month, paper, sub, table, themed, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Sleep: ready-made pages.
 
@@ -13,6 +13,7 @@ export const sleepTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(8, 'plain'),
       elements: [
+        themed(56, 40, 240, 'zzz'),
         title(60, 56, 620, 'Sleep journal'),
         art(724, 50, 124, 'sparkle', 'butter'),
         track(60, 210, 430, ctx.tracker('Sleep')),

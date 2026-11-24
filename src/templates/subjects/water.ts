@@ -1,4 +1,4 @@
-import { art, list, month, monthName, paper, shortDays, sub, table, tape, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, list, month, monthName, paper, shortDays, sub, table, themed, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Water: ready-made pages.
 
@@ -14,7 +14,7 @@ export const waterTemplates: BuiltInTemplate[] = [
       background: paper(7),
       elements: [
         title(60, 56, 620, 'Water'),
-        tape(600, 84, 240, 'sky', 'waves', 4),
+        themed(600, 84, 240, 'waterglasses', 4),
         track(60, 210, 480, ctx.tracker('Water')),
         list(570, 210, 270, 'Reminders', 'sky', ['Wake up', 'Mid-morning', 'Lunch', 'Afternoon', 'Dinner']),
         write(570, 620, 270, 330, 'Notes', 'mint'),
@@ -49,7 +49,7 @@ export const waterTemplates: BuiltInTemplate[] = [
       background: paper(7, 'plain'),
       elements: [
         title(60, 50, 700, 'Eight glasses'),
-        tape(600, 76, 240, 'sky', 'waves', 4),
+        themed(600, 76, 240, 'raindrops', 4),
         sub(62, 150, 700, 'Tick a box for every glass.'),
         table(60, 210, 780, 560, '', 'sky', ['1', '2', '3', '4', '5', '6', '7', '8'], weekDays(ctx)),
         list(60, 796, 380, 'Tips that help', 'mint', ['Bottle by the bed', 'A glass with every meal', 'Lemon or mint']),

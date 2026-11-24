@@ -1,4 +1,4 @@
-import { art, blank, list, monthName, paper, sub, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, monthName, paper, sub, table, tape, themed, title, write, type BuiltInTemplate } from '../kit';
 import { addMonths } from '../shared';
 
 // Birthdays: ready-made pages.
@@ -17,7 +17,7 @@ export const birthdaysTemplates: BuiltInTemplate[] = [
         elements: [
           title(60, 50, 600, 'Birthdays'),
           art(700, 34, 120, 'gift', 'rose', -6),
-          tape(600, 70, 130, 'butter', 'confetti', 6),
+          themed(600, 70, 130, 'cakes', 6),
           ...Array.from({ length: 12 }, (_, i) =>
             table(50 + (i % 3) * 270, 170 + Math.floor(i / 3) * 252, 260, 240, new Date(ctx.today.getFullYear(), i, 1).toLocaleDateString('en-US', { month: 'long' }), colors[i], ['Name', 'Day'], blank(3)),
           ),
@@ -34,7 +34,7 @@ export const birthdaysTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(3, 'plain'),
       elements: [
-        tape(50, 30, 220, 'coral', 'stripes'),
+        themed(50, 30, 220, 'balloons'),
         title(50, 46, 720, 'Birthday gift list'),
         art(1030, 26, 120, 'gift', 'coral', 8),
         table(50, 170, 760, 680, 'Birthdays', 'coral', ['Name', 'Birthday', 'Gift idea', 'Budget'], blank(10)),

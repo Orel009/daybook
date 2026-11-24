@@ -1,4 +1,4 @@
-import { art, blank, list, month, paper, sub, table, tape, title, track, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, month, paper, sub, table, tape, themed, title, track, write, type BuiltInTemplate } from '../kit';
 
 // Dreams: ready-made pages.
 
@@ -13,7 +13,7 @@ export const dreamsTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(10, 'dots'),
       elements: [
-        tape(56, 44, 220, 'lilac', 'stars'),
+        themed(56, 44, 220, 'moons'),
         title(60, 62, 620, 'Dream log', { color: '#FFFFFF' }),
         art(724, 44, 126, 'starlight', undefined, 0),
         write(60, 200, 380, 600, 'Themes this month', 'plum'),
@@ -31,7 +31,7 @@ export const dreamsTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(8, 'dots'),
       elements: [
-        tape(56, 44, 240, 'plum', 'stars'),
+        themed(56, 44, 240, 'zzz'),
         title(60, 62, 620, 'Recurring dreams', { size: 64 }),
         art(724, 44, 126, 'cloud', 'lilac', 6),
         write(60, 200, 780, 330, 'Dreams that come back', 'plum'),

@@ -1,4 +1,4 @@
-import { art, blank, frame, paper, photoSpot, table, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, frame, paper, photoSpot, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Kids: milestones, first words and growing up.
 
@@ -12,6 +12,7 @@ export const kidsTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(4),
       elements: [
+        themed(56, 34, 240, 'blocks'),
         title(60, 50, 640, 'Milestones'),
         art(740, 40, 100, 'star', 'butter', 8),
         ...photoSpot(60, 200, 300, 290, -3, 'butter', 'stars'),

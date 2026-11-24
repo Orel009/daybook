@@ -1,5 +1,5 @@
 import { type TapePattern } from '../../domain/pages';
-import { art, blank, frame, label, list, monthName, paper, rating, sub, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, frame, label, list, monthName, paper, rating, sub, table, tape, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Goals: ready-made pages.
 
@@ -13,7 +13,7 @@ export const goalsTemplates: BuiltInTemplate[] = [
     size: 'portrait',
     build: (ctx) => ({
       elements: [
-        tape(60, 46, 260, 'butter', 'stars'),
+        themed(60, 46, 260, 'targets'),
         title(60, 62, 760, `${monthName(ctx.month)} goals`),
         list(60, 210, 380, 'Health', 'mint', 3),
         list(460, 210, 380, 'Home', 'peach', 3),
@@ -34,7 +34,7 @@ export const goalsTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(4),
       elements: [
-        tape(60, 46, 240, 'mint', 'gingham'),
+        themed(60, 46, 240, 'checkmarks'),
         title(60, 62, 660, `${monthName(ctx.month)} goals`, { size: 68 }),
         sub(62, 160, 600, `One focus for ${monthName(ctx.month)} ${ctx.month.getFullYear()}`),
         art(730, 44, 110, 'star', 'butter', 8),

@@ -1,4 +1,4 @@
-import { art, list, monthName, paper, sub, tape, tiles, title, write, type BuiltInTemplate } from '../kit';
+import { art, list, monthName, paper, sub, tape, themed, tiles, title, write, type BuiltInTemplate } from '../kit';
 import { seasonOf, SEASON_LOOK, SEASON_BINGO } from '../shared';
 
 // Yearly bingo: ready-made pages.
@@ -14,7 +14,7 @@ export const yearlyBingoTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(8, 'dots'),
       elements: [
-        tape(56, 40, 260, 'lilac', 'confetti'),
+        themed(56, 40, 260, 'fireworks'),
         title(60, 60, 620, `${ctx.year} Bingo`),
         art(722, 40, 128, 'sparkle', 'butter', 8),
         sub(62, 160, 620, '24 goals for the year. Get a line!'),
@@ -33,7 +33,7 @@ export const yearlyBingoTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(6, 'grid'),
       elements: [
-        tape(56, 40, 240, 'mint', 'gingham'),
+        themed(56, 40, 240, 'party'),
         title(60, 60, 620, `${ctx.year} goals bingo`, { size: 60 }),
         art(724, 40, 126, 'star', 'butter', -8),
         tiles(60, 200, 780, 760, '', 'teal', 4, 16, { bingo: true, mark: 'cross' }),

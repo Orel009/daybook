@@ -1,4 +1,4 @@
-import { art, blank, list, paper, table, tape, tiles, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, paper, table, tape, themed, tiles, title, write, type BuiltInTemplate } from '../kit';
 import { GENRES } from '../shared';
 
 // Movie challenge: ready-made pages.
@@ -13,7 +13,7 @@ export const movieChallengeTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(10, 'dots'),
       elements: [
-        tape(50, 26, 220, 'coral', 'stripes'),
+        themed(50, 26, 220, 'filmstrip'),
         title(50, 40, 760, 'Movie genre challenge', { color: '#FFFFFF', size: 64 }),
         art(1040, 20, 110, 'star', 'butter', 8),
         tiles(50, 150, 1100, 700, 'One film per genre: title, date, stars', 'coral', 4, GENRES, { bingo: true, mark: 'stamp' }),
@@ -29,7 +29,7 @@ export const movieChallengeTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(1, 'lines'),
       elements: [
-        tape(56, 44, 220, 'sky', 'checker'),
+        themed(56, 44, 220, 'popcorn'),
         title(60, 62, 620, 'Movie log'),
         art(724, 44, 126, 'starlight', undefined, 6),
         table(60, 200, 780, 820, 'Watched', 'sky', ['Date', 'Film', 'Genre', 'With', 'Stars'], blank(14)),

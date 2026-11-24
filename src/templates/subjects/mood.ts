@@ -1,4 +1,4 @@
-import { art, blank, list, month, monthName, paper, sub, table, tape, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, month, monthName, paper, sub, table, themed, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Mood: ready-made pages.
 
@@ -34,7 +34,7 @@ export const moodTemplates: BuiltInTemplate[] = [
       background: paper(1),
       elements: [
         title(60, 44, 760, `${ctx.year} in pixels`),
-        tape(600, 72, 240, 'lilac', 'confetti', 4),
+        themed(600, 72, 240, 'smileys', 4),
         track(60, 160, 780, ctx.tracker('Mood'), { look: 'pixels', full: true }),
       ],
     }),
@@ -108,7 +108,7 @@ export const moodTemplates: BuiltInTemplate[] = [
       background: paper(1),
       elements: [
         title(60, 50, 700, `${monthName(ctx.today)} moods`),
-        tape(620, 156, 220, 'lilac', 'confetti', 4),
+        themed(620, 156, 220, 'rainbows', 4),
         month(60, 196, 780, 630, 'lilac', ctx.today),
         table(60, 850, 380, 300, 'My key', 'butter', ['Word or colour', 'Feeling'], blank(5)),
         write(460, 850, 380, 300, 'Patterns I notice', 'mint'),

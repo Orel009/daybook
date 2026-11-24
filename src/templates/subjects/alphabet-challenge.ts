@@ -1,5 +1,5 @@
 import { ALPHABET } from '../../domain/pages';
-import { art, list, paper, table, tape, tiles, title, write, type BuiltInTemplate } from '../kit';
+import { art, list, paper, table, tape, themed, tiles, title, write, type BuiltInTemplate } from '../kit';
 
 // Alphabet challenge: ready-made pages.
 
@@ -35,7 +35,7 @@ export const alphabetChallengeTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(8, 'grid'),
       elements: [
-        tape(56, 44, 220, 'lilac', 'stars'),
+        themed(56, 44, 220, 'alphabet'),
         title(60, 62, 620, 'A to Z mixed', {}),
         art(724, 44, 126, 'openbook', 'sky', -6),
         tiles(60, 200, 780, 760, 'Read, watch or listen', 'lilac', 6, ALPHABET, { mark: 'stamp' }),

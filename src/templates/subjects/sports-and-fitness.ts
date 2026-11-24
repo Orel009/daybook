@@ -1,4 +1,4 @@
-import { art, blank, list, paper, sub, table, tape, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, paper, sub, table, themed, title, track, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Sports and fitness: ready-made pages.
 
@@ -57,7 +57,7 @@ export const sportsAndFitnessTemplates: BuiltInTemplate[] = [
       background: paper(6),
       elements: [
         title(60, 56, 700, 'Stretching goals'),
-        tape(620, 150, 220, 'mint', 'waves', 4),
+        themed(620, 150, 220, 'dumbbells', 4),
         track(60, 210, 400, ctx.tracker('Stretching')),
         list(490, 210, 350, 'Daily routine', 'mint', ['Neck rolls', 'Shoulders', 'Hamstrings', 'Hip opener', 'Child’s pose']),
         list(490, 606, 350, 'Goals', 'rose', ['Touch my toes', 'Deep squat for a minute', '']),
@@ -93,7 +93,7 @@ export const sportsAndFitnessTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(4),
       elements: [
-        tape(60, 44, 240, 'butter', 'stars', -3),
+        themed(60, 44, 240, 'sneakers', -3),
         title(60, 60, 640, 'Personal bests'),
         art(724, 40, 120, 'trophy', 'butter', 6),
         table(60, 200, 780, 520, '', 'butter', ['Activity', 'Best', 'Date'], ['5 km run', 'Longest walk', 'Plank', 'Push-ups', 'Swim laps', '', '']),

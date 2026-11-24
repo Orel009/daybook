@@ -1,4 +1,4 @@
-import { art, blank, challenge, list, numbered, paper, sub, table, title, track, weekDays, write, type BuiltInTemplate } from '../kit';
+import { art, blank, challenge, list, numbered, paper, sub, table, themed, title, track, weekDays, write, type BuiltInTemplate } from '../kit';
 
 // Language learning: words, verbs, phrases, a 30-day path, a practice log and the levels from A1 to C2.
 
@@ -14,6 +14,7 @@ export const languageLearningTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(7),
       elements: [
+        themed(56, 34, 240, 'chat'),
         title(60, 50, 640, 'Vocabulary'),
         art(740, 40, 100, 'speech', 'lilac', 6),
         table(60, 180, 780, 820, 'New words', 'sky', ['Word', 'Meaning', 'Example', 'Learned'], blank(12)),

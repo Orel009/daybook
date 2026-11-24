@@ -1,4 +1,4 @@
-import { art, month, monthName, paper, tape, title, track, write, type BuiltInTemplate } from '../kit';
+import { art, month, monthName, paper, themed, title, track, write, type BuiltInTemplate } from '../kit';
 
 // Weather: ready-made pages.
 
@@ -14,7 +14,7 @@ export const weatherTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(7, 'dots'),
       elements: [
-        tape(56, 44, 220, 'sky', 'dots'),
+        themed(56, 44, 220, 'weather'),
         title(60, 62, 620, `Weather ${ctx.year}`, {}),
         art(724, 44, 126, 'sun', undefined, 0),
         track(60, 200, 780, ctx.tracker('Weather'), { look: 'pixels', full: true }),
@@ -49,7 +49,7 @@ export const weatherTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(5, 'dots'),
       elements: [
-        tape(50, 26, 220, 'butter', 'stripes'),
+        themed(50, 26, 220, 'suns'),
         title(50, 40, 760, 'Weather and mood'),
         art(1040, 24, 110, 'cloud', 'sky', 6),
         track(50, 160, 440, ctx.tracker('Weather'), { look: 'calendar' }),

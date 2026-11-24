@@ -59,6 +59,7 @@ import { pageTrackerIds } from '../data/shareRules';
 import { backPreset, COVER_PRESETS, coverPreset, SPINE_COLORS } from '../domain/covers';
 import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
 import { scrollerOf, themeAccent } from '../ui/dom';
+import { tapesForSubject } from '../templates/subjectTapes';
 import { bendLine, flipLine, isCurved, linePoints, middle, moveLinePoint, straightenLine, type Pt } from '../domain/line';
 import { shapeWeight } from '../domain/shapes';
 import { LOCALE } from '../domain/dates';
@@ -836,6 +837,31 @@ function PageEditor({ stored }: { stored: Page }) {
             <>
               <div className="pe-field">
                 <span>Pattern</span>
+                {tapesForSubject(page.subject).length > 0 && (
+                  <>
+                    <small className="muted">For this page ({page.subject})</small>
+                    <div className="tape-picker is-recent" role="group" aria-label="Tapes for this page">
+                      {tapesForSubject(page.subject).map((id) => {
+                        const name = THEMED_TAPES.find((t) => t.id === id)?.name ?? id;
+                        return (
+                          <button
+                            key={id}
+                            aria-label={name}
+                            title={name}
+                            aria-pressed={selected.pattern === id}
+                            className={selected.pattern === id ? 'is-on' : ''}
+                            onClick={() => {
+                              patchEl(selected.id, { pattern: id, color: tapeColorFor(id, selected.color) });
+                              setRecent(rememberTape(id));
+                            }}
+                          >
+                            <TapeStrip color={tapeColorFor(id, selected.color)} pattern={id} edge={selected.edge} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 <div className="sticker-sets tape-themes" role="radiogroup" aria-label="Tape theme">
                   {TAPE_THEMES.map((th) => {
                     const on = (tapeTheme ?? themeOfTape(selected.pattern)) === th.id;

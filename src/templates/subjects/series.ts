@@ -1,4 +1,4 @@
-import { art, blank, list, paper, sub, table, tape, tiles, title, track, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, paper, sub, table, tape, themed, tiles, title, track, write, type BuiltInTemplate } from '../kit';
 
 // Series: ready-made pages.
 
@@ -13,7 +13,7 @@ export const seriesTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(9, 'grid'),
       elements: [
-        tape(50, 26, 220, 'plum', 'stripes'),
+        themed(50, 26, 220, 'popcorn'),
         title(50, 40, 700, 'Watching now'),
         art(1040, 20, 110, 'desklamp', undefined, 6),
         table(50, 160, 720, 690, 'Series', 'plum', ['Series', 'Season', 'Episode', 'Where', 'Status'], blank(10)),
@@ -32,7 +32,7 @@ export const seriesTemplates: BuiltInTemplate[] = [
       return {
         background: paper(8, 'dots'),
         elements: [
-          tape(56, 44, 220, 'lilac', 'checker'),
+          themed(56, 44, 220, 'tickets'),
           title(60, 62, 620, 'Episode tracker', { size: 64 }),
           art(724, 44, 126, 'star', 'butter', 6),
           write(60, 200, 780, 110, 'Series', 'lilac', false),

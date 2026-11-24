@@ -1,4 +1,4 @@
-import { art, monthName, paper, table, tape, title, track, type BuiltInTemplate } from '../kit';
+import { art, monthName, paper, table, themed, title, track, type BuiltInTemplate } from '../kit';
 
 // Temperature: ready-made pages.
 
@@ -14,7 +14,7 @@ export const temperatureTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(0, 'grid'),
       elements: [
-        tape(56, 44, 240, 'coral', 'rainbow'),
+        themed(56, 44, 240, 'suns'),
         title(60, 62, 640, `Temperature blanket ${ctx.year}`, { size: 46 }),
         art(724, 44, 126, 'mitten', 'blue', 8),
         track(60, 200, 780, ctx.tracker('Temperature (°C)'), { look: 'pixels', full: true }),
@@ -32,7 +32,7 @@ export const temperatureTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(0, 'grid'),
       elements: [
-        tape(56, 44, 240, 'orange', 'rainbow'),
+        themed(56, 44, 240, 'snowflakes'),
         title(60, 62, 640, `Temperature blanket ${ctx.year}`, { size: 46 }),
         art(724, 44, 126, 'sun', undefined, 0),
         track(60, 200, 780, ctx.tracker('Temperature (°F)'), { look: 'pixels', full: true }),

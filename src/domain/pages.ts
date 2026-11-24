@@ -381,6 +381,11 @@ export interface Page {
   sortOrder: number;
   /** The book's own covers. They are pages like any other, kept out of the journal, the page count and Arrange. */
   role?: 'cover' | 'back';
+  /**
+   * The template subject this page came from (or, for her own templates, the
+   * subject she filed it under). The tape picker offers that subject's tapes first.
+   */
+  subject?: string;
   /** Covers: colour of the strip along the binding (hex). */
   spine?: string;
   /** Front cover: leave out the "12 pages" line. */

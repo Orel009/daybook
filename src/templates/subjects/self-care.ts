@@ -1,4 +1,4 @@
-import { art, list, paper, photoSpot, shortDays, table, tape, title, track, write, type BuiltInTemplate } from '../kit';
+import { art, list, paper, photoSpot, shortDays, table, tape, themed, title, track, write, type BuiltInTemplate } from '../kit';
 
 // Self-care: ready-made pages.
 
@@ -12,7 +12,7 @@ export const selfCareTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(2, 'dots'),
       elements: [
-        tape(56, 44, 220, 'rose', 'hearts'),
+        themed(56, 44, 220, 'bubbles'),
         title(60, 62, 620, 'Self-care', {}),
         art(724, 44, 126, 'heart', 'rose', 6),
         list(60, 200, 380, 'Body', 'rose', ['Drink water', 'Move for 20 minutes', 'Eat something green', 'Stretch']),
@@ -32,7 +32,7 @@ export const selfCareTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(3, 'dots'),
       elements: [
-        tape(50, 26, 220, 'peach', 'flowers'),
+        themed(50, 26, 220, 'coffee'),
         title(50, 40, 700, 'Self-care menu'),
         art(1040, 20, 110, 'mug', 'peach', 8),
         list(50, 170, 350, '5 minutes', 'butter', ['Deep breaths', 'A cup of tea', 'Favourite song', 'Stretch', 'Step outside']),

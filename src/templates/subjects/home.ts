@@ -1,4 +1,4 @@
-import { art, blank, list, month, paper, shortDays, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, month, paper, shortDays, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Home: ready-made pages.
 
@@ -12,7 +12,7 @@ export const homeTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(6, 'grid'),
       elements: [
-        tape(56, 44, 220, 'mint', 'gingham'),
+        themed(56, 44, 220, 'houses'),
         title(60, 62, 620, 'Cleaning routine', { size: 64 }),
         art(724, 44, 126, 'sparkle', 'butter', 6),
         list(60, 200, 250, 'Daily', 'mint', ['Dishes', 'Wipe surfaces', 'Ten-minute tidy']),
@@ -31,7 +31,7 @@ export const homeTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(5, 'dots'),
       elements: [
-        tape(56, 44, 220, 'green', 'leaves'),
+        themed(56, 44, 220, 'sprouts'),
         title(60, 62, 620, 'Plant care'),
         art(724, 44, 126, 'succulent', undefined, 0),
         table(60, 200, 780, 470, 'My plants', 'green', ['Plant', 'Water every', 'Light', 'Last watered'], blank(6)),

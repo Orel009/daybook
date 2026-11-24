@@ -1,4 +1,4 @@
-import { art, blank, list, monthName, paper, shortDays, SOFT, sub, table, tape, title, track, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, monthName, paper, shortDays, SOFT, sub, table, tape, themed, title, track, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Habits: ready-made pages.
 
@@ -12,7 +12,7 @@ export const habitsTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       elements: [
         title(50, 30, 700, 'My habits'),
-        tape(900, 66, 240, 'rose', 'hearts', 3),
+        themed(900, 66, 240, 'checkmarks', 3),
         ...(ctx.trackerIds.length
           ? ctx.trackerIds.slice(0, 3).map((id, i) => track(50 + i * 375, 160, 350, id))
           : [title(50, 220, 900, 'Add a tracker first, then use the Tracker tool in Edit to place it here.', { font: 'clean', size: 34, color: SOFT })]),
@@ -30,7 +30,7 @@ export const habitsTemplates: BuiltInTemplate[] = [
       elements: [
         title(50, 30, 700, 'Habits this week'),
         sub(54, 132, 600, `Week of ${weekStart(ctx)}`),
-        tape(930, 64, 220, 'mint', 'checker', 4),
+        themed(930, 64, 220, 'sprouts', 4),
         table(50, 190, 1100, 540, '', 'mint', ['Habit', ...shortDays(ctx)], blank(7)),
         write(50, 746, 1100, 104, 'Notes', 'butter', false),
       ],

@@ -339,4 +339,7 @@ describe('templates that show a year or a month', () => {
       }
     }
   });
+  it('a page made from a template remembers its subject', () => {
+    for (const t of BUILT_IN_TEMPLATES.slice(0, 40)) expect(buildTemplatePage(t, ctx(today)).subject).toBe(t.subject);
+  });
 });

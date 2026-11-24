@@ -122,6 +122,7 @@ export function buildTemplatePage(t: BuiltInTemplate, ctx: TemplateContext): Pag
     id: `template-${t.id}`,
     // a page for a year or a month says which one in its title, so twelve monthly pages can be told apart
     title: t.asks === 'year' ? `${t.name} ${ctx.year}` : t.asks === 'month' ? `${t.name}: ${ctx.month.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' })}` : t.name,
+    subject: t.subject,
     size: t.size,
     background: built.background ?? { color: BG_COLORS[0], pattern: 'dots' },
     elements,

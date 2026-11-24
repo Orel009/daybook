@@ -1,5 +1,5 @@
 import { type TapePattern } from '../../domain/pages';
-import { art, list, longDate, month, paper, sub, tape, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, list, longDate, month, paper, sub, tape, themed, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Gratitude: ready-made pages.
 
@@ -71,7 +71,7 @@ export const gratitudeTemplates: BuiltInTemplate[] = [
       background: paper(4),
       elements: [
         title(60, 56, 700, '30 days of thanks', { size: 64 }),
-        tape(620, 150, 220, 'rose', 'hearts', 3),
+        themed(620, 150, 220, 'sweethearts', 3),
         month(60, 196, 780, 700, 'rose', ctx.today),
         write(60, 920, 780, 230, 'The best day this month', 'butter'),
       ],

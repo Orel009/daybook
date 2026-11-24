@@ -1,4 +1,4 @@
-import { art, label, list, longDate, paper, rating, sub, table, title, write, type BuiltInTemplate } from '../kit';
+import { art, label, list, longDate, paper, rating, sub, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Productivity: the day hour by hour, time blocking, and a top three.
 
@@ -12,6 +12,7 @@ export const productivityTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(1),
       elements: [
+        themed(56, 34, 240, 'targets'),
         title(60, 50, 640, 'Today, by the hour', { size: 62 }),
         art(740, 40, 100, 'sun', 'butter', 6),
         sub(60, 140, 600, longDate(ctx.today)),

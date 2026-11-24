@@ -1,4 +1,4 @@
-import { frame, label, list, paper, rating, table, title, write, type BuiltInTemplate } from '../kit';
+import { frame, label, list, paper, rating, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Year in review: highlights and lessons, a photo for every month, and the year in numbers.
 
@@ -15,6 +15,7 @@ export const yearInReviewTemplates: BuiltInTemplate[] = [
     build: (ctx) => ({
       background: paper(4),
       elements: [
+        themed(56, 38, 240, 'fireworks'),
         title(60, 54, 580, 'Year in review', { size: 66 }),
         title(650, 40, 190, String(ctx.year), { font: 'tall', size: 110, align: 'right' }),
         list(60, 190, 380, 'Highlights', 'butter', 5),

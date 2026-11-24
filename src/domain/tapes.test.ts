@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { TAPE_PATTERNS } from './pages';
 import { isThemedTape, isWordTape, TAPE_DEFAULT_COLOR, tapeColorFor, tapeImage, TAPE_THEMES, THEMED_TAPES, withRecent } from './tapes';
 import { TAPE_COLORS } from './types';
@@ -75,7 +75,7 @@ describe('word tapes', () => {
     expect(isWordTape('word-november')).toBe(true);
     expect(isWordTape('lemons')).toBe(false);
     expect(isWordTape('stripes')).toBe(false);
-    expect(THEMED_TAPES.filter((t) => isWordTape(t.id)).length).toBe(17);
+    expect(THEMED_TAPES.filter((t) => isWordTape(t.id)).length).toBe(18);
   });
   it('the word starts at the start of the tile and is pinned to a width inside it', () => {
     for (const t of THEMED_TAPES.filter((x) => isWordTape(x.id))) {

@@ -1,4 +1,4 @@
-import { art, blank, list, longDate, monthName, monthsAhead, paper, sticky, sub, table, title, write, type BuiltInTemplate, type TemplateContext } from '../kit';
+import { art, blank, list, longDate, monthName, monthsAhead, paper, sticky, sub, table, themed, title, write, type BuiltInTemplate, type TemplateContext } from '../kit';
 
 // Bullet journal basics: the index, the key, a future log, a daily log, a brain dump and a migration page.
 
@@ -18,6 +18,7 @@ const futureLog = (id: string, name: string, months: number, cols: number, descr
     return {
       background: paper(0),
       elements: [
+        themed(56, 34, 240, 'checkmarks'),
         title(60, 50, 640, 'Future log'),
         sub(60, 146, 600, months === 6 ? 'The next six months' : 'The year ahead'),
         ...Array.from({ length: months }, (_, i) => write(60 + (i % cols) * (w + 20), 200 + Math.floor(i / cols) * (h + 16), w, h, monthName(monthsAhead(ctx.today, i)), COLORS[i])),

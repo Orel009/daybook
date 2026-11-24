@@ -1,4 +1,4 @@
-import { art, blank, list, longDate, month, monthName, paper, shortDays, sub, table, tape, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, longDate, month, monthName, paper, shortDays, sub, table, tape, themed, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Planning: ready-made pages.
 
@@ -11,7 +11,7 @@ export const planningTemplates: BuiltInTemplate[] = [
     size: 'portrait',
     build: (ctx) => ({
       elements: [
-        tape(56, 44, 250, 'rose', 'stripes'),
+        themed(56, 44, 250, 'calendars'),
         title(60, 62, 600, 'Today'),
         sub(62, 168, 600, longDate(ctx.today)),
         art(716, 52, 132, 'sun'),
@@ -35,7 +35,7 @@ export const planningTemplates: BuiltInTemplate[] = [
         elements: [
           title(50, 30, 700, 'This week'),
           sub(54, 132, 600, `Week of ${weekStart(ctx)}`),
-          tape(930, 64, 220, 'mint', 'gingham', 4),
+          themed(930, 64, 220, 'checkmarks', 4),
           ...names.map((n, i) => write(50 + (i % 4) * 279, 196 + Math.floor(i / 4) * 342, 262, 326, n, colors[i])),
         ],
       };

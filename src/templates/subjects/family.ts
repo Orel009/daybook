@@ -1,4 +1,4 @@
-import { art, blank, month, monthName, paper, photoSpot, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, month, monthName, paper, photoSpot, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Family: ready-made pages.
 
@@ -12,7 +12,7 @@ export const familyTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(3, 'plain'),
       elements: [
-        tape(56, 44, 220, 'peach', 'hearts'),
+        themed(56, 44, 220, 'houses'),
         title(60, 62, 620, 'Family firsts'),
         art(724, 44, 126, 'nest', undefined, 6),
         ...photoSpot(60, 210, 250, 230, -3, 'rose', 'dots'),

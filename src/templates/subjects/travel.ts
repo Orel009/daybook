@@ -1,4 +1,4 @@
-import { art, blank, list, paper, table, tape, title, write, type BuiltInTemplate } from '../kit';
+import { art, blank, list, paper, table, themed, title, write, type BuiltInTemplate } from '../kit';
 
 // Travel: ready-made pages.
 
@@ -12,7 +12,7 @@ export const travelTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(7, 'dots'),
       elements: [
-        tape(56, 44, 220, 'sky', 'checker'),
+        themed(56, 44, 220, 'travelstamps'),
         title(60, 62, 620, 'Packing list'),
         art(724, 44, 126, 'compass', undefined, 6),
         list(60, 200, 380, 'Clothes', 'sky', ['Tops', 'Trousers', 'Underwear', 'Socks', 'Pyjamas', 'Jacket']),
@@ -33,7 +33,7 @@ export const travelTemplates: BuiltInTemplate[] = [
     build: () => ({
       background: paper(6, 'dots'),
       elements: [
-        tape(50, 26, 220, 'teal', 'waves'),
+        themed(50, 26, 220, 'airmail'),
         title(50, 40, 700, 'Trip planner'),
         art(1040, 20, 110, 'tent', undefined, 6),
         write(50, 160, 520, 130, 'Where and when', 'teal', false),

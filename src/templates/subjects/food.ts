@@ -1,4 +1,4 @@
-import { art, blank, frame, list, paper, sub, table, tape, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
+import { art, blank, frame, list, paper, sub, table, tape, themed, title, weekDays, weekStart, write, type BuiltInTemplate } from '../kit';
 
 // Food: ready-made pages.
 
@@ -32,7 +32,7 @@ export const foodTemplates: BuiltInTemplate[] = [
       return {
         background: paper(5, 'grid'),
         elements: [
-          tape(60, 46, 230, 'green', 'leaves'),
+          themed(60, 46, 230, 'cutlery'),
           title(60, 62, 700, 'Grocery list'),
           ...sections.map(([name, color], i) => list(60 + (i % 2) * 400, 210 + Math.floor(i / 2) * 318, 380, name, color, 3)),
         ],
@@ -65,7 +65,7 @@ export const foodTemplates: BuiltInTemplate[] = [
       background: paper(3, 'plain'),
       elements: [
         title(60, 50, 760, 'Recipe'),
-        tape(620, 76, 220, 'peach', 'gingham', 4),
+        themed(620, 76, 220, 'lemons', 4),
         write(60, 190, 780, 104, 'Name', 'peach', false),
         frame(60, 316, 380, 300, -2),
         write(60, 640, 380, 140, 'Serves and time', 'butter', false),

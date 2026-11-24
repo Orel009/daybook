@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../data/store';
 import { LOCALE } from '../domain/dates';
+import { isOwnTemplate, pageFromOwnTemplate } from '../domain/ownTemplates';
 import { isJournalPage, lastEdited, type Page, type PageSize } from '../domain/pages';
 import { EmptyState, PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
@@ -30,7 +31,7 @@ export function PageCard({ page, children }: { page: Page; children?: ReactNode 
 
 function NewPageSheet({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
-  const templates = useStore((s) => s.pages).filter((p) => p.isTemplate);
+  const templates = useStore((s) => s.pages).filter(isOwnTemplate);
   const createPage = useStore((s) => s.createPage);
   const [title, setTitle] = useState('');
   const [size, setSize] = useState<PageSize>('portrait');
@@ -38,7 +39,7 @@ function NewPageSheet({ onClose }: { onClose: () => void }) {
   const template = templates.find((t) => t.id === templateId);
 
   const create = () => {
-    const page = createPage(title.trim() || template?.title || 'Untitled page', template?.size ?? size, template, false);
+    const page = createPage(title.trim() || template?.title || 'Untitled page', template?.size ?? size, template && pageFromOwnTemplate(template, new Date()), false);
     navigate(`/journal/${page.id}?edit=1`);
   };
 

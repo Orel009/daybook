@@ -386,6 +386,13 @@ export interface Page {
    * subject she filed it under). The tape picker offers that subject's tapes first.
    */
   subject?: string;
+  /** Her own templates: a line saying what the template is for. */
+  description?: string;
+  /**
+   * Her own templates: the month (YYYY-MM) the template was saved in, when the
+   * month and year in its titles should follow the date it is used on.
+   */
+  autoDate?: string;
   /** Covers: colour of the strip along the binding (hex). */
   spine?: string;
   /** Front cover: leave out the "12 pages" line. */

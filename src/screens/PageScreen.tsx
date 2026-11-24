@@ -59,6 +59,8 @@ import { pageTrackerIds } from '../data/shareRules';
 import { backPreset, COVER_PRESETS, coverPreset, SPINE_COLORS } from '../domain/covers';
 import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
 import { scrollerOf, themeAccent } from '../ui/dom';
+import { SaveTemplateSheet } from './EditorExtras';
+import { pageFromOwnTemplate } from '../domain/ownTemplates';
 import { tapesForSubject } from '../templates/subjectTapes';
 import { bendLine, flipLine, isCurved, linePoints, middle, moveLinePoint, straightenLine, type Pt } from '../domain/line';
 import { shapeWeight } from '../domain/shapes';
@@ -237,7 +239,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const propsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
-  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover' | 'shape'>(null);
+  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover' | 'shape' | 'template'>(null);
   const isCover = Boolean(stored.role);
   const pageCount = useStore((st) => bookOrder(st.pages).length);
   // photo slots: which one the picker is filling, and which one's photo is being positioned
@@ -1664,7 +1666,7 @@ function PageEditor({ stored }: { stored: Page }) {
               <button
                 className="btn"
                 onClick={() => {
-                  const made = createPage(page.title, page.size, page, false);
+                  const made = createPage(page.title, page.size, pageFromOwnTemplate(page, new Date()), false);
                   navigate(`/journal/${made.id}?edit=1`);
                 }}
               >
@@ -1683,11 +1685,7 @@ function PageEditor({ stored }: { stored: Page }) {
                 </button>
                 <button
                   className="btn"
-                  onClick={() => {
-                    createPage(page.title || 'Untitled page', page.size, page, true);
-                    setSheet(null);
-                    navigate('/templates');
-                  }}
+                  onClick={() => setSheet('template')}
                 >
                   Save as a template
                 </button>
@@ -1700,6 +1698,16 @@ function PageEditor({ stored }: { stored: Page }) {
         </Sheet>
       )}
 
+      {sheet === 'template' && (
+        <SaveTemplateSheet
+          page={page}
+          onClose={() => setSheet(null)}
+          onSaved={() => {
+            setSheet(null);
+            navigate('/templates');
+          }}
+        />
+      )}
       {sheet === 'shape' && (
         <Sheet title="Add a shape" onClose={() => setSheet(null)}>
           <div className="shape-picker">

@@ -1398,7 +1398,7 @@ button.pp-seg { cursor: pointer; }
 .pp-month.is-mini .pp-day { align-items: center; justify-content: center; }
 .pp-month.is-mini .pp-day b { align-self: center; min-width: 0; padding: 0 3px; border-radius: 6px; font-size: 15px; font-weight: 700; }
 
-/* ---------- new year, new month ---------- */
+/* ---------- new year, new month, my templates ---------- */
 .tick-list { display: grid; gap: 4px; }
 .tick-row { display: flex; align-items: center; gap: 12px; min-height: 46px; font-weight: 700; cursor: pointer; }
 .tick-row input { flex: none; width: 26px; height: 26px; margin: 0; accent-color: var(--ink); }
@@ -1408,4 +1408,6 @@ button.pp-seg { cursor: pointer; }
 .plan-year-head .group-title { margin: 0 0 4px; }
 .new-month { display: grid; gap: 10px; margin-bottom: 18px; border-style: dashed; }
 .new-month h2 { font-size: 1.25rem; }
+.my-subject + .my-subject { margin-top: 18px; }
+.my-subject-title { margin: 0 0 10px; font-family: var(--font-display); font-size: 1.05rem; color: var(--ink-soft); }
 

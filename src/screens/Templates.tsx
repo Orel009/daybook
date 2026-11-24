@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useActiveTrackers } from '../data/hooks';
 import { useStore } from '../data/store';
 import { defaultMonth, defaultYear, planningYear } from '../domain/newYear';
+import { isOwnTemplate, NO_SUBJECT, ownSubjects, pageFromOwnTemplate } from '../domain/ownTemplates';
 import { lastEdited, PAGE_DIMS, type Page, type PageSize } from '../domain/pages';
 import type { BuiltInTemplate, TemplateContext } from '../templates/library';
 import { makePage } from '../templates/make';
 import { findTemplates, matchesQuery, subjectsOf } from '../templates/search';
-import { TEMPLATE_GROUPS } from '../templates/subjects';
+import { TEMPLATE_GROUPS, TEMPLATE_SUBJECTS } from '../templates/subjects';
 import { PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
-import { PageCard, THUMB } from './Journal';
+import { Sheet } from '../ui/Sheet';
+import { SubjectPicker } from '../ui/SubjectPicker';
+import { THUMB } from './Journal';
 import { SetUpYearSheet, WhenSheet } from './NewYear';
 import { TemplatePreview } from './TemplatePreview';
 
@@ -20,6 +23,7 @@ import { TemplatePreview } from './TemplatePreview';
 //   - a thumbnail is only drawn once its card scrolls near the screen
 // Tapping a card opens a preview (the address gets ?preview=<id>, so Back
 // closes it); the card's "Use" button makes the page straight away.
+// Her own templates come first, under the subjects she filed them in.
 
 type Library = typeof import('../templates/library');
 let loaded: Library | null = null;
@@ -65,9 +69,10 @@ export function Templates() {
   const library = useLibrary();
   const trackers = useActiveTrackers();
   const weekStartsOn = useStore((s) => s.settings.weekStartsOn);
-  const createPage = useStore((s) => s.createPage);
+  const { createPage, savePage, deletePage } = useStore.getState();
   const allPages = useStore((s) => s.pages);
-  const mine = useMemo(() => allPages.filter((p) => p.isTemplate).sort((a, b) => lastEdited(b).localeCompare(lastEdited(a))), [allPages]);
+  const mine = useMemo(() => allPages.filter(isOwnTemplate).sort((a, b) => lastEdited(b).localeCompare(lastEdited(a))), [allPages]);
+  const mySubjects = useMemo(() => ownSubjects(allPages, TEMPLATE_SUBJECTS), [allPages]);
 
   const [group, setGroup] = useState('All');
   const [subject, setSubject] = useState('All');
@@ -103,7 +108,19 @@ export function Templates() {
 
   const sections = useMemo(() => (library ? findTemplates(library.BUILT_IN_TEMPLATES, { query, group, subject }) : []), [library, query, group, subject]);
 
-  const myMatches = mine.filter((t) => matchesQuery(query, t.title || 'Untitled page'));
+  // ----- her own templates, under their subjects
+  const myMatches = mine.filter((t) => matchesQuery(query, t.title || 'Untitled template', t.description ?? '', t.subject ?? ''));
+  const myGroups = useMemo(() => {
+    const map = new Map<string, Page[]>();
+    for (const t of myMatches) map.set(t.subject || NO_SUBJECT, [...(map.get(t.subject || NO_SUBJECT) ?? []), t]);
+    return [...map.entries()].sort(([a], [b]) => (a === NO_SUBJECT ? -1 : b === NO_SUBJECT ? 1 : a.localeCompare(b)));
+  }, [myMatches]);
+  const useMine = (t: Page) => {
+    const page = createPage(t.title, t.size, pageFromOwnTemplate(t, new Date()), false);
+    navigate(`/journal/${page.id}?edit=1`);
+  };
+  const [changing, setChanging] = useState<Page | null>(null);
+  const [starting, setStarting] = useState(false);
   const nothing = Boolean(library) && sections.length === 0 && myMatches.length === 0;
 
   // ----- "Plan <year>": from December 1 to January 31
@@ -166,7 +183,15 @@ export function Templates() {
 
   return (
     <>
-      <PageHeader title="Templates" sub="Start a page from one of these, then make it yours" />
+      <PageHeader
+        title="Templates"
+        sub="Start a page from one of these, then make it yours"
+        action={
+          <button className="btn" onClick={() => setStarting(true)}>
+            New template
+          </button>
+        }
+      />
 
       <div className="template-search">
         <label htmlFor="template-search" className="sr-only">
@@ -192,27 +217,40 @@ export function Templates() {
         </section>
       )}
 
-      {myMatches.length > 0 && (
-        <section className="group">
-          <h2 className="group-title">Your templates</h2>
-          <div className="page-grid">
-            {myMatches.map((t) => (
-              <PageCard key={t.id} page={t}>
-                <button
-                  className="btn btn-small"
-                  onClick={() => {
-                    const page = createPage(t.title, t.size, t, false);
-                    navigate(`/journal/${page.id}?edit=1`);
-                  }}
-                >
-                  Use template
-                </button>
-                <button className="btn btn-small btn-quiet" onClick={() => navigate(`/export?page=${t.id}`)} aria-label={`Print ${t.title || 'this template'}`}>
-                  Print
-                </button>
-              </PageCard>
-            ))}
-          </div>
+      {myGroups.length > 0 && (
+        <section className="group my-templates" aria-labelledby="my-templates-title">
+          <h2 className="group-title" id="my-templates-title">
+            My templates
+          </h2>
+          {myGroups.map(([name, list]) => (
+            <div key={name} className="my-subject">
+              {(myGroups.length > 1 || name !== NO_SUBJECT) && <h3 className="my-subject-title">{name === NO_SUBJECT ? 'No subject' : name}</h3>}
+              <div className="page-grid">
+                {list.map((t) => (
+                  <article key={t.id} className="page-card">
+                    <Link to={`/journal/${t.id}?edit=1`} className="page-card-link" aria-label={`Edit my template ${t.title || 'Untitled template'}`}>
+                      <StaticPage page={t} width={THUMB[t.size]} />
+                    </Link>
+                    <div className="page-card-text">
+                      <strong>{t.title || 'Untitled template'}</strong>
+                      {t.description && <small className="muted">{t.description}</small>}
+                    </div>
+                    <div className="page-card-actions">
+                      <button className="btn btn-small" onClick={() => useMine(t)} aria-label={`Use my template ${t.title || 'Untitled template'}`}>
+                        Use
+                      </button>
+                      <Link className="btn btn-small btn-quiet" to={`/journal/${t.id}?edit=1`}>
+                        Edit
+                      </Link>
+                      <button className="btn btn-small btn-quiet" onClick={() => setChanging(t)} aria-label={`More for my template ${t.title || 'Untitled template'}`}>
+                        More
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
@@ -257,7 +295,7 @@ export function Templates() {
         </section>
       ))}
 
-      <p className="muted">To save one of your own pages as a template, open it and choose More, then "Save as a template".</p>
+      <p className="muted">To save one of your own pages as a template, open it and choose More, then "Save as a template". "New template" starts one from a blank page.</p>
 
       {library && previewed && (
         <TemplatePreview
@@ -282,7 +320,134 @@ export function Templates() {
         />
       )}
       {settingUp && planYear !== null && <SetUpYearSheet year={planYear} onClose={() => setSettingUp(false)} />}
+      {starting && (
+        <NewTemplateSheet
+          own={mySubjects}
+          onClose={() => setStarting(false)}
+          onCreate={(name, size, subj) => {
+            const page = createPage(name || 'New template', size, undefined, true);
+            if (subj) savePage({ ...page, subject: subj });
+            navigate(`/journal/${page.id}?edit=1`);
+          }}
+        />
+      )}
+      {changing && (
+        <OwnTemplateSheet
+          key={changing.id}
+          template={changing}
+          own={mySubjects}
+          onClose={() => setChanging(null)}
+          onSave={(patch) => {
+            const { subject: s, description: d, ...rest } = { ...changing, ...patch };
+            savePage({ ...rest, ...(s ? { subject: s } : {}), ...(d ? { description: d } : {}) });
+            setChanging(null);
+          }}
+          onDuplicate={() => {
+            createPage(`${changing.title || 'Untitled template'} copy`, changing.size, changing, true);
+            setChanging(null);
+          }}
+          onPrint={() => navigate(`/export?page=${changing.id}`)}
+          onDelete={() => {
+            deletePage(changing.id);
+            setChanging(null);
+          }}
+        />
+      )}
     </>
   );
 }
 
+/** "New template": a blank page in template mode, with a name, a shape and (if she likes) a subject. */
+function NewTemplateSheet({ own, onClose, onCreate }: { own: string[]; onClose: () => void; onCreate: (name: string, size: PageSize, subject: string) => void }) {
+  const [name, setName] = useState('');
+  const [size, setSize] = useState<PageSize>('portrait');
+  const [subject, setSubject] = useState('');
+  return (
+    <Sheet
+      title="New template"
+      onClose={onClose}
+      footer={
+        <button className="btn btn-primary" onClick={() => onCreate(name.trim(), size, subject.trim())}>
+          Start the template
+        </button>
+      }
+    >
+      <p className="muted">Starts from a blank page. Lay it out in the editor; it stays with your templates and can be used again and again.</p>
+      <div className="field">
+        <label htmlFor="nt-name">Name</label>
+        <input id="nt-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="My weekly page" maxLength={60} />
+      </div>
+      <div className="field">
+        <span className="label" id="nt-shape">
+          Shape
+        </span>
+        <div className="seg" role="radiogroup" aria-labelledby="nt-shape">
+          {(['portrait', 'landscape'] as const).map((s) => (
+            <button key={s} role="radio" aria-checked={size === s} className={size === s ? 'is-on' : ''} onClick={() => setSize(s)}>
+              {s === 'portrait' ? 'Tall' : 'Wide'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="nt-subject">Subject</label>
+        <SubjectPicker id="nt-subject" value={subject} own={own} onChange={setSubject} />
+      </div>
+    </Sheet>
+  );
+}
+
+/** Rename, describe, move to a subject, duplicate, print or delete one of her templates. */
+function OwnTemplateSheet({ template, own, onClose, onSave, onDuplicate, onPrint, onDelete }: { template: Page; own: string[]; onClose: () => void; onSave: (patch: { title: string; subject: string; description: string }) => void; onDuplicate: () => void; onPrint: () => void; onDelete: () => void }) {
+  const [title, setTitle] = useState(template.title);
+  const [subject, setSubject] = useState(template.subject ?? '');
+  const [description, setDescription] = useState(template.description ?? '');
+  const [deleting, setDeleting] = useState(false);
+  return (
+    <Sheet
+      title={template.title || 'Untitled template'}
+      onClose={onClose}
+      footer={
+        <button className="btn btn-primary" onClick={() => onSave({ title: title.trim() || 'Untitled template', subject: subject.trim(), description: description.trim() })}>
+          Save
+        </button>
+      }
+    >
+      <div className="field">
+        <label htmlFor="ot-name">Name</label>
+        <input id="ot-name" type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
+      </div>
+      <div className="field">
+        <label htmlFor="ot-subject">Subject</label>
+        <SubjectPicker id="ot-subject" value={subject} own={own} onChange={setSubject} />
+      </div>
+      <div className="field">
+        <label htmlFor="ot-description">Description</label>
+        <input id="ot-description" type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this template is for" maxLength={140} />
+      </div>
+      <div className="menu-list">
+        <button className="btn" onClick={onDuplicate}>
+          Duplicate this template
+        </button>
+        <button className="btn" onClick={onPrint}>
+          Print this template
+        </button>
+        {deleting ? (
+          <div className="inline" role="group" aria-label="Delete this template?">
+            <span>Pages made from it stay. Delete the template?</span>
+            <button className="btn btn-danger" onClick={onDelete}>
+              Delete
+            </button>
+            <button className="btn btn-quiet" onClick={() => setDeleting(false)}>
+              Keep it
+            </button>
+          </div>
+        ) : (
+          <button className="btn danger" onClick={() => setDeleting(true)}>
+            Delete this template
+          </button>
+        )}
+      </div>
+    </Sheet>
+  );
+}

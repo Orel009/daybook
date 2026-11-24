@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { draftFromPreset, PRESETS } from '../data/defaults';
 import { useActiveTrackers } from '../data/hooks';
 import { useStore } from '../data/store';
@@ -10,11 +10,14 @@ import { TEMPLATE_GROUPS } from '../templates/subjects';
 import { PageHeader } from '../ui/Layout';
 import { StaticPage } from '../ui/PageCanvas';
 import { PageCard, THUMB } from './Journal';
+import { TemplatePreview } from './TemplatePreview';
 
 // The Templates screen. With a few hundred templates it has to stay light:
 //   - the templates themselves (templates/library.ts) are a separate piece of
 //     the app, fetched the first time this screen is opened
 //   - a thumbnail is only drawn once its card scrolls near the screen
+// Tapping a card opens a preview (the address gets ?preview=<id>, so Back
+// closes it); the card's "Use" button makes the page straight away.
 
 type Library = typeof import('../templates/library');
 let loaded: Library | null = null;
@@ -81,19 +84,46 @@ export function Templates() {
     return page!;
   };
 
-  const use = (t: BuiltInTemplate) => {
+  const use = (t: BuiltInTemplate, fromPreview = false) => {
     if (!library) return;
     const { createTracker } = useStore.getState();
     // a page that shows a tracker needs that tracker: reuse one with the same name, or add it
     const tracker = (name: string) => (byName(name) ?? createTracker(draftFromPreset(PRESETS.find((p) => p.name === name)))).id;
     const page = library.buildTemplatePage(t, { today: new Date(), weekStartsOn, tracker, trackerIds: trackers.map((x) => x.id) });
     const saved = createPage(t.name, t.size, page, false);
-    navigate(`/journal/${saved.id}`);
+    // from the preview, the new page takes the preview's place, so Back returns to the templates
+    navigate(`/journal/${saved.id}`, { replace: fromPreview });
   };
 
   const sections = useMemo(() => (library ? findTemplates(library.BUILT_IN_TEMPLATES, { query, group, subject }) : []), [library, query, group, subject]);
   const myMatches = mine.filter((t) => matchesQuery(query, t.title || 'Untitled page'));
   const nothing = Boolean(library) && sections.length === 0 && myMatches.length === 0;
+
+  // ----- the preview: which template, and which ones the arrows and swipes move through
+  const [params, setParams] = useSearchParams();
+  const previewId = params.get('preview');
+  const previewed = previewId && library ? library.BUILT_IN_TEMPLATES.find((t) => t.id === previewId) : undefined;
+  const openedHere = useRef(false);
+  useEffect(() => {
+    if (!previewId) openedHere.current = false;
+    // an address with a template that doesn't exist: just the list
+    else if (library && !previewed) setParams({}, { replace: true });
+  }, [previewId, library, previewed, setParams]);
+  const openPreview = (t: BuiltInTemplate) => {
+    openedHere.current = true;
+    setParams({ preview: t.id });
+  };
+  const closePreview = () => {
+    // Back closes it too; closing by hand goes back the same way, so it isn't left in the history
+    if (openedHere.current) navigate(-1);
+    else setParams({}, { replace: true });
+  };
+  const previewList = useMemo(() => {
+    if (!previewed) return [];
+    // searching: the results in order; otherwise the templates of its subject
+    if (query.trim()) return sections.flatMap((s) => s.templates);
+    return sections.find((s) => s.subject === previewed.subject)?.templates ?? [previewed];
+  }, [previewed, query, sections]);
 
   return (
     <>
@@ -120,6 +150,9 @@ export function Templates() {
                   }}
                 >
                   Use template
+                </button>
+                <button className="btn btn-small btn-quiet" onClick={() => navigate(`/export?page=${t.id}`)} aria-label={`Print ${t.title || 'this template'}`}>
+                  Print
                 </button>
               </PageCard>
             ))}
@@ -169,7 +202,7 @@ export function Templates() {
               const needs = missing(t);
               return (
                 <article key={t.id} className="page-card">
-                  <button className="page-card-link" onClick={() => use(t)} aria-label={`Use the ${t.name} template`}>
+                  <button className="page-card-link" onClick={() => openPreview(t)} aria-label={`Preview the ${t.name} template`}>
                     <LazyThumb page={() => preview(t)} size={t.size} />
                   </button>
                   <div className="page-card-text">
@@ -179,9 +212,14 @@ export function Templates() {
                       {needs.length > 0 && ` Adds a ${needs.join(' and ')} tracker.`}
                     </small>
                   </div>
-                  <button className="btn btn-small" onClick={() => use(t)}>
-                    Use template
-                  </button>
+                  <div className="page-card-actions">
+                    <button className="btn btn-small" onClick={() => use(t)} aria-label={`Use the ${t.name} template`}>
+                      Use
+                    </button>
+                    <button className="btn btn-small btn-quiet" onClick={() => navigate(`/export?template=${t.id}`)} aria-label={`Print the ${t.name} template blank`}>
+                      Print blank
+                    </button>
+                  </div>
                 </article>
               );
             })}
@@ -190,6 +228,18 @@ export function Templates() {
       ))}
 
       <p className="muted">To save one of your own pages as a template, open it and choose More, then "Save as a template".</p>
+
+      {library && previewed && (
+        <TemplatePreview
+          library={library}
+          list={previewList.some((t) => t.id === previewed.id) ? previewList : [previewed]}
+          template={previewed}
+          onMove={(t) => setParams({ preview: t.id }, { replace: true })}
+          onClose={closePreview}
+          onUse={(t) => use(t, true)}
+          onPrint={(t) => navigate(`/export?template=${t.id}`)}
+        />
+      )}
     </>
   );
 }

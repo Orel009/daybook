@@ -1359,3 +1359,32 @@ button.pp-seg { cursor: pointer; }
 /* a writing area without its panel: only the lines and the writing, for inside a shape */
 .pp-panel.pp-writing.is-bare { background: none; border-color: transparent; border-radius: 0; }
 .pp-panel.pp-writing.is-bare .pp-head { background: none !important; border-bottom-color: transparent; text-align: var(--pp-align, left); }
+
+/* ---------- template preview ---------- */
+.page-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tp-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; background: rgb(40 30 55 / 0.45); }
+.tp { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; width: 100%; height: 100dvh; background: var(--paper); color: var(--ink); outline: none; }
+.tp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 8px; }
+.tp-title { display: grid; min-width: 0; }
+.tp-title h2 { font-size: 1.35rem; line-height: 1.15; overflow-wrap: anywhere; }
+.tp-stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.tp-area { overflow: hidden; display: grid; place-items: center; min-height: 0; touch-action: pan-y; background: repeating-conic-gradient(rgb(58 43 71 / 0.06) 0 25%, transparent 0 50%) 0 0 / 22px 22px; }
+.tp-area.is-zoomed { overflow: auto; place-items: start; touch-action: pan-x pan-y; }
+.tp-page { margin: 12px; flex: none; }
+.tp-page .pg { margin: 0; }
+.tp-arrow { position: absolute; top: calc(50% - 24px); z-index: 2; background: var(--raised); box-shadow: 0 2px 6px rgb(40 25 55 / 0.25); }
+.tp-arrow.is-prev { left: 8px; }
+.tp-arrow.is-next { right: 8px; }
+.tp-arrow:disabled { opacity: 0.35; }
+.tp-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 8px 16px 0; }
+.tp-zoom { display: flex; align-items: center; gap: 6px; }
+.tp-zoom .btn { min-width: 44px; }
+.tp-foot { display: grid; gap: 10px; padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); }
+.tp-foot p { line-height: 1.4; }
+.tp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 760px) {
+  .tp-backdrop { place-items: center; padding: 24px; }
+  .tp { max-width: 980px; height: min(100dvh - 48px, 1100px); border: 1.5px solid var(--ink); border-radius: 24px; box-shadow: 5px 6px 0 var(--shade); overflow: hidden; }
+  .tp-head { padding: 18px 22px 10px; }
+  .tp-tools, .tp-foot { padding-left: 22px; padding-right: 22px; }
+}

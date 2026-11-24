@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { keepsPrintPhotos, printPhotoUsage, removeAllPrintPhotos, setKeepPrintPhotos } from '../data/printPhotos';
 import { useStore, type BackupFile } from '../data/store';
 import { LOCALE, todayKey } from '../domain/dates';
 import type { ThemeId } from '../domain/types';
@@ -14,6 +15,67 @@ const THEMES: { id: ThemeId; name: string; hint: string }[] = [
   { id: 'dark', name: 'Evening', hint: 'The same book, lights down' },
   { id: 'minimal', name: 'Minimal', hint: 'Plain paper, no decoration' },
 ];
+
+const megabytes = (bytes: number) => (bytes < 100_000 ? `${Math.max(1, Math.round(bytes / 1000))} KB` : `${(bytes / 1_000_000).toFixed(1)} MB`);
+
+/** Print-quality copies of photos: a switch for this device, how much room they take, and a way to remove them. */
+function PrintingSection() {
+  const [on, setOn] = useState(keepsPrintPhotos);
+  const [usage, setUsage] = useState<{ count: number; bytes: number } | null>(null);
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    void printPhotoUsage().then(setUsage);
+  }, []);
+  return (
+    <section className="card form-card">
+      <h2>Printing</h2>
+      <button
+        className={`chip ${on ? 'is-on' : ''}`}
+        role="switch"
+        aria-checked={on}
+        onClick={() => {
+          setKeepPrintPhotos(!on);
+          setOn(!on);
+        }}
+      >
+        Keep print-quality photos on this device
+      </button>
+      <p className="muted">
+        Photos on your pages are kept at 1600 pixels: right for the screen and quick to sync. With this on, a photo you add from now on also keeps a copy of up to 3000 pixels on this device, and printing and exporting use it. These copies are not
+        synced or put in a backup, and each one goes when its photo is removed.
+      </p>
+      <p role="status">
+        {usage === null ? 'Counting…' : usage.count === 0 ? 'No print-quality copies on this device.' : `${usage.count} print-quality ${usage.count === 1 ? 'copy' : 'copies'} on this device, using ${megabytes(usage.bytes)}.`}
+      </p>
+      {usage !== null && usage.count > 0 && !asking && (
+        <div className="inline">
+          <button className="btn" onClick={() => setAsking(true)}>
+            Remove these copies
+          </button>
+        </div>
+      )}
+      {asking && (
+        <div className="inline" role="group" aria-label="Remove the print-quality copies?">
+          <span>Your pages keep their photos; only prints get less sharp. Remove them?</span>
+          <button
+            className="btn danger"
+            onClick={() => {
+              void removeAllPrintPhotos().then(() => {
+                setUsage({ count: 0, bytes: 0 });
+                setAsking(false);
+              });
+            }}
+          >
+            Remove
+          </button>
+          <button className="btn btn-quiet" onClick={() => setAsking(false)}>
+            Keep them
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
 
 export function Settings() {
   const settings = useStore((s) => s.settings);
@@ -97,6 +159,8 @@ export function Settings() {
 
       <AccountSection />
       <SharingSection />
+
+      <PrintingSection />
 
       <section className="card form-card">
         <h2>Backup</h2>

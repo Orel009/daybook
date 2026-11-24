@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { newId } from '../domain/types';
 import * as db from './db';
 import { markDirty } from './outbox';
+import { keepsPrintPhotos, PRINT_SIDE, printPhoto, removeAllPrintPhotos, removePrintPhoto, savePrintPhoto } from './printPhotos';
 
 // Photos are stored once as compressed blobs in their own store and referenced
 // by id from pages, so page records stay small and a photo used on several
@@ -50,6 +51,15 @@ export async function addImage(file: Blob, maxSide = MAX_SIDE): Promise<{ id: st
   memory.set(record.id, record);
   await db.put('assets', record).catch((err) => console.error('Could not save photo', err));
   void markDirty('asset', record.id);
+  // for printing: a larger copy that stays on this device, if she asked for that and the photo has more to give
+  if (maxSide === MAX_SIDE && keepsPrintPhotos()) {
+    try {
+      const big = await compress(file, PRINT_SIDE, 0.9);
+      if (Math.max(big.w, big.h) > Math.max(w, h)) await savePrintPhoto({ id: record.id, blob: big.blob, w: big.w, h: big.h });
+    } catch {
+      /* the page copy is saved; printing uses that */
+    }
+  }
   return { id: record.id, w, h };
 }
 
@@ -60,6 +70,14 @@ async function load(id: string): Promise<AssetRecord | undefined> {
   if (record) memory.set(id, record);
   return record;
 }
+
+/** The size in pixels of the best copy of a photo on this device (`print`: a print-quality copy), or undefined if there is none. */
+export const assetSize = async (id: string): Promise<{ w: number; h: number; print: boolean } | undefined> => {
+  const big = await printPhoto(id);
+  if (big) return { w: big.w, h: big.h, print: true };
+  const record = await load(id);
+  return record && { w: record.w, h: record.h, print: false };
+};
 
 /**
  * Where a page's photos come from when it isn't one of this book's own pages:
@@ -72,6 +90,18 @@ export interface PhotoSource {
 }
 
 const ownPhotos: PhotoSource = { ns: '', load: async (id) => (await load(id))?.blob };
+
+/** For printing and exporting: the print-quality copy of a photo where there is one, otherwise the photo as the page has it. */
+export const bestPhotos: PhotoSource = { ns: 'best', load: async (id) => (await printPhoto(id))?.blob ?? (await load(id))?.blob };
+
+/** Lets go of the addresses made for a source's photos (after an export: its large copies need not stay in memory). */
+export function releasePhotoUrls(ns: string): void {
+  for (const [key, url] of urls) {
+    if (!key.startsWith(`${ns}:`)) continue;
+    URL.revokeObjectURL(url);
+    urls.delete(key);
+  }
+}
 
 /** Object URL for a stored photo, or undefined while loading / if missing. */
 export function useAssetUrl(id: string | undefined, source: PhotoSource = ownPhotos): string | undefined {
@@ -159,6 +189,7 @@ export async function importAssets(list: BackupAsset[]): Promise<void> {
   const records: AssetRecord[] = list.map((a) => ({ id: a.id, w: a.w, h: a.h, blob: fromDataUrl(a.dataUrl), createdAt: new Date().toISOString() }));
   for (const r of records) memory.set(r.id, r);
   await db.replaceAll({ assets: records }).catch((err) => console.error('Could not restore photos', err));
+  await removeAllPrintPhotos(); // they belonged to the photos that were replaced
 }
 
 /**
@@ -184,6 +215,7 @@ export async function deleteLocalAsset(id: string): Promise<void> {
   if (url) URL.revokeObjectURL(url);
   urls.delete(id);
   await db.remove('assets', id).catch(() => undefined);
+  await removePrintPhoto(id);
 }
 
 export interface CloudAsset {
@@ -217,4 +249,5 @@ export function forgetAllAssets(): void {
   for (const url of urls.values()) URL.revokeObjectURL(url);
   urls.clear();
   memory.clear();
+  void removeAllPrintPhotos();
 }

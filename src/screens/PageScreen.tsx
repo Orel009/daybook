@@ -1606,6 +1606,11 @@ function PageEditor({ stored }: { stored: Page }) {
                 Share…
               </button>
             )}
+            {!isCover && (
+              <button className="btn" onClick={() => navigate(`/export?page=${page.id}`)}>
+                Print or save as PDF
+              </button>
+            )}
             {isCover ? null : page.isTemplate ? (
               <button
                 className="btn"

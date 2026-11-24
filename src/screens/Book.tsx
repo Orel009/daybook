@@ -79,11 +79,18 @@ export function Book() {
           title="Book"
           sub="Swipe, tap the arrows or use the arrow keys to turn the page"
           action={
-            pages.length > 1 ? (
-              <Link className="btn" to="/arrange?from=book">
-                Arrange pages
-              </Link>
-            ) : undefined
+            <>
+              {pages.length > 1 && (
+                <Link className="btn" to="/arrange?from=book">
+                  Arrange pages
+                </Link>
+              )}
+              {pages.length > 0 && (
+                <Link className="btn" to="/export">
+                  Print or save as PDF
+                </Link>
+              )}
+            </>
           }
         />
       }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { useStore, useUi } from './data/store';
 import { startSync } from './data/sync';
@@ -16,6 +16,9 @@ import { Book } from './screens/Book';
 import { Arrange } from './screens/Arrange';
 import { Settings } from './screens/Settings';
 import { SharedBookScreen, SharedPageScreen, SharedTrackerScreen } from './screens/Shared';
+
+// Printing and exporting is a piece of its own, fetched the first time its screen is opened.
+const ExportScreen = lazy(() => import('./export/ExportScreen'));
 
 const THEME_COLORS = { scrapbook: '#E9E4F2', dark: '#1D1A24', minimal: '#F3F3F1' } as const;
 
@@ -55,6 +58,14 @@ export function App() {
           <Route path="book" element={<Book />} />
           <Route path="arrange" element={<Arrange />} />
           <Route path="templates" element={<Templates />} />
+          <Route
+            path="export"
+            element={
+              <Suspense fallback={<p className="muted" role="status">Getting ready to print…</p>}>
+                <ExportScreen />
+              </Suspense>
+            }
+          />
           <Route path="settings" element={<Settings />} />
           <Route path="shared/:owner/page/:id" element={<SharedPageScreen />} />
           <Route path="shared/:owner/tracker/:id" element={<SharedTrackerScreen />} />

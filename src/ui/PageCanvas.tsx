@@ -35,7 +35,13 @@ export interface PageSource {
   entries: TrackerEntry[];
 }
 export const PageSourceContext = createContext<PageSource | null>(null);
-const usePagePhoto = (id: string | undefined) => useAssetUrl(id, useContext(PageSourceContext)?.photos);
+/** Printing only: where this book's own photos are taken from (the best copy on the device). Unset everywhere else. */
+export const PrintPhotosContext = createContext<PhotoSource | null>(null);
+const usePagePhoto = (id: string | undefined) => {
+  const source = useContext(PageSourceContext);
+  const print = useContext(PrintPhotosContext);
+  return useAssetUrl(id, source?.photos ?? print ?? undefined);
+};
 
 function PhotoBody({ el }: { el: Extract<PageElement, { type: 'photo' }> }) {
   const url = usePagePhoto(el.assetId);

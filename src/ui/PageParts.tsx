@@ -15,7 +15,7 @@ import {
   type TableElement,
   type WritingElement,
 } from '../domain/pages';
-import { TAPE_COLORS } from '../domain/types';
+import { paint, TAPE_COLORS } from '../domain/types';
 
 // Page parts that hold writing: checklists, tables, lined writing areas, a
 // month grid, a bookshelf and tile grids. Three ways to draw them:
@@ -32,7 +32,7 @@ interface PartProps<E> {
   onChange?: PartChange;
 }
 
-const tint = (color: string | undefined) => TAPE_COLORS[color ?? ''] ?? TAPE_COLORS.rose;
+const tint = (color: string | undefined) => paint(color) ?? TAPE_COLORS.rose;
 
 /**
  * The part's text style as CSS variables. Unset fields add nothing, so the

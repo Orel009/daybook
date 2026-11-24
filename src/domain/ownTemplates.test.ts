@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOwnTemplate, layoutOnly, ownSubjects, pageFromOwnTemplate, redateText, templateFrom } from './ownTemplates';
+import { isBlock, isOwnTemplate, layoutOnly, ownSubjects, pageFromOwnTemplate, redateText, templateFrom } from './ownTemplates';
 import type { Page, PageElement } from './pages';
 
 const base = { rotation: 0 };
@@ -135,17 +135,18 @@ describe('a month and year that follow the date', () => {
   });
 });
 
-describe('her templates among the pages', () => {
+describe('her templates and blocks among the pages', () => {
   const pages = [
     page([], { id: 'a', isTemplate: true, subject: 'Garden' }),
     page([], { id: 'b', isTemplate: true, subject: 'Planning' }),
     page([], { id: 'c', isTemplate: true }),
     page([], { id: 'd', isTemplate: true, subject: 'Baking' }),
-    page([], { id: 'e', isTemplate: false, role: 'cover', subject: 'Covers' }),
+    page([], { id: 'e', isTemplate: true, role: 'block', subject: 'Blocks' }),
     page([], { id: 'f', isTemplate: false, subject: 'Travel diary' }),
   ];
-  it('a cover is not a template, and a journal page is neither', () => {
+  it('a block is not a template, and a journal page is neither', () => {
     expect(pages.filter(isOwnTemplate).map((p) => p.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(pages.filter(isBlock).map((p) => p.id)).toEqual(['e']);
   });
   it('her own subjects are the ones that are not ready-made, A to Z', () => {
     expect(ownSubjects(pages, ['Planning', 'Travel'])).toEqual(['Baking', 'Garden']);

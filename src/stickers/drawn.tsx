@@ -1,4 +1,4 @@
-import { TAPE_COLORS } from '../domain/types';
+import { paint, TAPE_COLORS } from '../domain/types';
 
 // Built-in drawn stickers. Each is a small original vector drawing on a
 // 100×100 grid with the app's ink outline, so they look the same on every
@@ -196,7 +196,7 @@ export const drawnSticker = (id: string | undefined) => (id ? BY_ID.get(id) : un
 export function DrawnStickerArt({ id, color }: { id: string; color?: string }) {
   const art = BY_ID.get(id);
   if (!art) return null;
-  const hex = TAPE_COLORS[color ?? art.color] ?? TAPE_COLORS[art.color] ?? TAPE_COLORS.rose;
+  const hex = paint(color ?? art.color) ?? TAPE_COLORS[art.color] ?? TAPE_COLORS.rose;
   const body = `<g fill="none" stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${art.svg.split('{C}').join(hex)}</g>`;
   return <svg className="drawn-sticker" viewBox="0 0 100 100" aria-hidden="true" dangerouslySetInnerHTML={{ __html: body }} />;
 }

@@ -5,7 +5,7 @@ import { useDayMap, useToday } from '../data/hooks';
 import { useStore, useUi } from '../data/store';
 import { autoHeight, fontOf, isDarkColor, isFillable, PAGE_DIMS, type FrameElement, type Page, type PageElement } from '../domain/pages';
 import { isWordTape, tapeImage } from '../domain/tapes';
-import { TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
+import { paint, TAPE_COLORS, type TrackerDefinition, type TrackerEntry } from '../domain/types';
 import { buildDayMap } from '../domain/stats';
 import { opensOn } from '../domain/newYear';
 import { configFor, getVisualization } from '../visualizations';
@@ -136,7 +136,7 @@ export function TapeStrip({ color, pattern, edge, sheer }: { color: string; patt
   return (
     <div
       className={`pg-tape ${art ? `tape-art ${words ? 'tape-words' : ''}` : `tape-${pattern}`} edge-${edge ?? 'torn'} ${sheer ? 'is-sheer' : ''}`}
-      style={{ backgroundColor: TAPE_COLORS[color], backgroundImage: words ? `${art}, linear-gradient(transparent, transparent)` : art }}
+      style={{ backgroundColor: paint(color), backgroundImage: words ? `${art}, linear-gradient(transparent, transparent)` : art }}
     />
   );
 }
@@ -242,7 +242,7 @@ export function ElementBody({ el, live, onChange, editing = false }: { el: PageE
             fontSize: el.size,
             color: el.color,
             textAlign: el.align,
-            background: el.note ? TAPE_COLORS[el.note] : undefined,
+            background: el.note ? paint(el.note) : undefined,
           }}
         >
           {el.text || ' '}

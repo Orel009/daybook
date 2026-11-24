@@ -832,6 +832,8 @@ button:disabled { cursor: default; opacity: 0.45; }
   .pe-props { font-size: 0.95rem; }
   .pe:not(.has-selection) .pe-props { border: 0; padding: 0; background: none; grid-area: tools; margin-top: 70px; }
   .pe:not(.has-selection) .pe-body { grid-template-areas: 'tools' 'canvas'; }
+  /* the hint shares the toolbar's row and sits under it: the toolbar keeps its own height */
+  .pe-tools { align-self: start; }
   .pe:not(.has-selection) .pe-props p { font-size: 0.85rem; }
   .pe.has-selection .pe-props {
     position: fixed;
@@ -1398,6 +1400,16 @@ button.pp-seg { cursor: pointer; }
 .pp-month.is-mini .pp-day { align-items: center; justify-content: center; }
 .pp-month.is-mini .pp-day b { align-self: center; min-width: 0; padding: 0 3px; border-radius: 6px; font-size: 15px; font-weight: 700; }
 
+/* ---------- more papers ---------- */
+.pattern-bigdots { background-image: radial-gradient(var(--pg-line) 4.6px, transparent 5.2px); background-size: 72px 72px; }
+.pattern-graph { background-image: linear-gradient(var(--pg-line) 1px, transparent 1px), linear-gradient(90deg, var(--pg-line) 1px, transparent 1px), linear-gradient(var(--pg-line) 1.6px, transparent 1.6px), linear-gradient(90deg, var(--pg-line) 1.6px, transparent 1.6px); background-size: 18px 18px, 18px 18px, 90px 90px, 90px 90px; }
+.pattern-iso { background-image: radial-gradient(var(--pg-line) 2.2px, transparent 2.6px), radial-gradient(var(--pg-line) 2.2px, transparent 2.6px); background-size: 40px 69.3px; background-position: 0 0, 20px 34.65px; }
+.pattern-hex { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath fill='none' stroke='%233A2B47' stroke-opacity='.17' stroke-width='1.6' d='M28 0v16.2L0 32.3v32.4l28 16.1 28-16.1V32.3L28 16.2M28 80.800V97M0 32.300v0M56 32.300v0'/%3E%3C/svg%3E"); background-size: 56px 97px; }
+.pattern-staff { background-image: linear-gradient(var(--pg-line) 1.6px, transparent 1.6px), linear-gradient(var(--pg-line) 1.6px, transparent 1.6px), linear-gradient(var(--pg-line) 1.6px, transparent 1.6px), linear-gradient(var(--pg-line) 1.6px, transparent 1.6px), linear-gradient(var(--pg-line) 1.6px, transparent 1.6px); background-size: 100% 132px; background-position: 0 40px, 0 54px, 0 68px, 0 82px, 0 96px; }
+.pattern-checks { background-image: linear-gradient(45deg, var(--pg-line) 25%, transparent 25%, transparent 75%, var(--pg-line) 75%), linear-gradient(45deg, var(--pg-line) 25%, transparent 25%, transparent 75%, var(--pg-line) 75%); background-size: 60px 60px; background-position: 0 0, 30px 30px; }
+.pattern-wash { background-image: radial-gradient(ellipse at 18% 12%, rgb(243 163 186 / 0.34), transparent 46%), radial-gradient(ellipse at 86% 26%, rgb(168 205 242 / 0.36), transparent 44%), radial-gradient(ellipse at 30% 86%, rgb(169 223 196 / 0.34), transparent 48%), radial-gradient(ellipse at 82% 82%, rgb(246 219 125 / 0.3), transparent 44%), radial-gradient(ellipse at 52% 48%, rgb(201 182 240 / 0.22), transparent 52%); }
+.pattern-fade { background-image: linear-gradient(160deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0) 42%), linear-gradient(340deg, rgb(58 43 71 / 0.1), rgb(58 43 71 / 0) 46%); }
+
 /* ---------- new year, new month, my templates ---------- */
 .tick-list { display: grid; gap: 4px; }
 .tick-row { display: flex; align-items: center; gap: 12px; min-height: 46px; font-weight: 700; cursor: pointer; }
@@ -1411,3 +1423,23 @@ button.pp-seg { cursor: pointer; }
 .my-subject + .my-subject { margin-top: 18px; }
 .my-subject-title { margin: 0 0 10px; font-family: var(--font-display); font-size: 1.05rem; color: var(--ink-soft); }
 
+/* ---------- editor: several parts, locks, mixed colours, palettes, blocks ---------- */
+.pe-tool.is-on { background: var(--accent); color: var(--on-tape); }
+.pg-el.is-picked { outline: calc(3px / var(--pg-scale)) solid #2f5fb0; outline-offset: calc(4px / var(--pg-scale)); box-shadow: 0 0 0 calc(4px / var(--pg-scale)) rgb(255 255 255 / 0.6); z-index: 5; }
+.pg-el.type-line.is-picked .pg-line-hit { stroke: rgb(47 95 176 / 0.35); }
+.pg.is-edit .pg-el.is-locked { cursor: default; }
+.lock-badge { position: absolute; right: calc(-14px / var(--pg-scale)); top: calc(-14px / var(--pg-scale)); width: calc(28px / var(--pg-scale)); height: calc(28px / var(--pg-scale)); display: grid; place-items: center; border-radius: 50%; background: #fff; border: var(--hair) solid #3a2b47; font-size: calc(14px / var(--pg-scale)); line-height: 1; pointer-events: none; }
+.color-mix { margin-top: 2px; align-items: center; }
+.color-row .swatch-mix { display: grid; place-items: center; background: none; border: 1.5px dashed var(--ink); color: var(--ink); font-weight: 800; font-size: 1.05rem; line-height: 1; }
+.color-mix .btn { width: auto; height: auto; border-radius: 999px; }
+.palette-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.palette { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 46px; padding: 6px 12px; border: 1.5px solid var(--ink); border-radius: 14px; background: var(--raised); font-weight: 700; text-align: left; }
+.palette-dots { display: flex; flex: none; }
+.palette-dots i { width: 16px; height: 22px; border: 1px solid rgb(58 43 71 / 0.5); margin-left: -1px; }
+.palette-dots i:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.palette-dots i:last-child { border-radius: 0 6px 6px 0; }
+.block-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
+.block-grid button { position: relative; display: grid; justify-items: center; gap: 6px; padding: 10px 6px 8px; border: 1.5px solid var(--ink); border-radius: 16px; background: var(--raised); font-weight: 700; font-size: 0.85rem; line-height: 1.2; overflow-wrap: anywhere; }
+.block-grid button.is-removing { border-color: var(--danger); border-style: dashed; }
+.blk-thumb { display: block; border: 0; border-radius: 6px; box-shadow: none; background: #fffdf9; margin: 0; }
+.blk-thumb .pg-layer { overflow: visible; }

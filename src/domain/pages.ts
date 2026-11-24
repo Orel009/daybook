@@ -15,7 +15,10 @@ export const PAGE_DIMS: Record<PageSize, { w: number; h: number }> = {
   landscape: { w: 1200, h: 900 },
 };
 
-export type PagePattern = 'dots' | 'grid' | 'lines' | 'plain' | 'cover' | 'linen' | 'leather' | 'kraft' | 'floral' | 'pastel' | 'night';
+export type PagePattern =
+  | 'dots' | 'grid' | 'lines' | 'plain'
+  | 'bigdots' | 'graph' | 'iso' | 'hex' | 'staff' | 'checks' | 'wash' | 'fade'
+  | 'cover' | 'linen' | 'leather' | 'kraft' | 'floral' | 'pastel' | 'night';
 
 export interface PageBackground {
   color: string; // hex
@@ -31,6 +34,8 @@ interface ElementBase {
   /** Ignored for text and tracker elements: their height follows their content. */
   h: number;
   rotation: number; // degrees
+  /** Kept where it is: it can't be dragged, resized or turned until it is unlocked. */
+  locked?: boolean;
 }
 
 // Lettering styles for journal text. To add one: bundle the font in main.tsx
@@ -380,7 +385,7 @@ export interface Page {
   isTemplate: boolean;
   sortOrder: number;
   /** The book's own covers. They are pages like any other, kept out of the journal, the page count and Arrange. */
-  role?: 'cover' | 'back';
+  role?: 'cover' | 'back' | 'block';
   /**
    * The template subject this page came from (or, for her own templates, the
    * subject she filed it under). The tape picker offers that subject's tapes first.
@@ -437,6 +442,14 @@ export const PATTERNS: { id: PagePattern; name: string }[] = [
   { id: 'grid', name: 'Grid' },
   { id: 'lines', name: 'Lines' },
   { id: 'plain', name: 'Plain' },
+  { id: 'bigdots', name: 'Large dots' },
+  { id: 'graph', name: 'Small graph' },
+  { id: 'iso', name: 'Isometric dots' },
+  { id: 'hex', name: 'Hexagons' },
+  { id: 'staff', name: 'Music staff' },
+  { id: 'checks', name: 'Checks' },
+  { id: 'wash', name: 'Watercolour wash' },
+  { id: 'fade', name: 'Soft gradient' },
 ];
 
 /** Papers with a texture, made for covers and dividers but usable on any page. */

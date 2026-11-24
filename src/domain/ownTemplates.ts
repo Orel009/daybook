@@ -8,6 +8,8 @@ import type { FrameElement, Page, PageElement } from './pages';
 
 /** A page that is one of her templates (covers and saved blocks are something else). */
 export const isOwnTemplate = (p: Pick<Page, 'isTemplate' | 'role'>): boolean => p.isTemplate && !p.role;
+/** A saved block: a few parts kept to drop onto any page ("My blocks"). */
+export const isBlock = (p: Pick<Page, 'role'>): boolean => p.role === 'block';
 
 /** The subject her templates go under when she hasn't chosen one. */
 export const NO_SUBJECT = 'My templates';
@@ -33,6 +35,7 @@ const emptied = (el: PageElement): PageElement => {
     case 'photo': {
       // a loose photo becomes an empty slot of the same size, so the layout keeps its place for a photo
       const slot: FrameElement = { id: el.id, type: 'frame', x: el.x, y: el.y, w: el.w, h: el.h, rotation: el.rotation, style: el.frame === 'polaroid' ? 'polaroid' : 'plain' };
+      if (el.locked) slot.locked = true;
       return slot;
     }
     default:

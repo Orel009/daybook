@@ -98,8 +98,13 @@ export interface Settings {
   newMonthCard?: boolean;
   /** The month (YYYY-MM) whose "New month" card was dismissed. */
   dismissedMonth?: string;
+  /** Colours she mixed herself in the editor's colour picker (hex), newest first. */
+  customColors?: string[];
   updatedAt: string;
 }
+
+/** The colour a part's colour stands for: one of the named tape colours, or any colour she mixed herself (hex). */
+export const paint = (color: string | undefined): string | undefined => (color?.startsWith('#') ? color : TAPE_COLORS[color ?? '']);
 
 export const TAPE_COLORS: Record<string, string> = {
   rose: '#F3A3BA',

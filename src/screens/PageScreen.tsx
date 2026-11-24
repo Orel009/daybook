@@ -48,7 +48,7 @@ import {
   type Page,
   type PageElement,
 } from '../domain/pages';
-import { newId, TAPE_COLORS } from '../domain/types';
+import { newId, paint, TAPE_COLORS } from '../domain/types';
 import { EmptyState } from '../ui/Layout';
 import { CustomStickerBody, ElementBody, frameStyle, PageSurface, StaticPage, TapeStrip } from '../ui/PageCanvas';
 import { DRAWN_STICKERS, DrawnStickerArt, drawnSticker } from '../stickers/drawn';
@@ -59,9 +59,11 @@ import { pageTrackerIds } from '../data/shareRules';
 import { backPreset, COVER_PRESETS, coverPreset, SPINE_COLORS } from '../domain/covers';
 import { recentTapes, rememberTape, TAPE_THEMES, tapeColorFor, THEMED_TAPES, type TapeTheme } from '../domain/tapes';
 import { scrollerOf, themeAccent } from '../ui/dom';
-import { SaveTemplateSheet } from './EditorExtras';
-import { pageFromOwnTemplate } from '../domain/ownTemplates';
 import { tapesForSubject } from '../templates/subjectTapes';
+import { alignBoxes, clampMove, copiedParts, copyParts, distributeBoxes, placed, type Align, type Box } from '../domain/arrange';
+import { recolour } from '../domain/palettes';
+import { BlocksSheet, ColorMix, RecolourList, SaveBlockSheet, SaveTemplateSheet } from './EditorExtras';
+import { pageFromOwnTemplate } from '../domain/ownTemplates';
 import { bendLine, flipLine, isCurved, linePoints, middle, moveLinePoint, straightenLine, type Pt } from '../domain/line';
 import { shapeWeight } from '../domain/shapes';
 import { LOCALE } from '../domain/dates';
@@ -143,7 +145,19 @@ function applyGesture(start: PageElement, h0: number, mode: Mode, dx: number, dy
   return { ...extra, x: Math.round(cx - w / 2), y: Math.round(cy - h / 2), w: Math.round(w), ...(autoHeight(start) ? {} : { h: Math.round(h) }) };
 }
 
-function Swatches({ colors, value, label, onPick, allowNone }: { colors: [string, string][]; value: string | undefined; label: string; onPick: (key: string | undefined) => void; allowNone?: boolean }) {
+const ALIGNS: [Align, string][] = [['left', 'Left'], ['center', 'Centre'], ['right', 'Right'], ['top', 'Top'], ['middle', 'Middle'], ['bottom', 'Bottom']];
+
+/** The ready-made colours, and under them the colours she mixed herself with a way to mix another. */
+function Swatches({ colors, value, label, onPick, allowNone, mix = true }: { colors: [string, string][]; value: string | undefined; label: string; onPick: (key: string | undefined) => void; allowNone?: boolean; mix?: boolean }) {
+  return (
+    <>
+      <SwatchRow colors={colors} value={value} label={label} onPick={onPick} allowNone={allowNone} />
+      {mix && <ColorMix value={value} label={label} onPick={onPick} />}
+    </>
+  );
+}
+
+function SwatchRow({ colors, value, label, onPick, allowNone }: { colors: [string, string][]; value: string | undefined; label: string; onPick: (key: string | undefined) => void; allowNone?: boolean }) {
   return (
     <div className="color-row is-small" role="radiogroup" aria-label={label}>
       {allowNone && (
@@ -239,7 +253,7 @@ function PageEditor({ stored }: { stored: Page }) {
   const propsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [panelPad, setPanelPad] = useState(0);
-  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover' | 'shape' | 'template'>(null);
+  const [sheet, setSheet] = useState<null | 'sticker' | 'tracker' | 'background' | 'more' | 'delete' | 'grid' | 'cover' | 'shape' | 'template' | 'blocks' | 'block'>(null);
   const isCover = Boolean(stored.role);
   const pageCount = useStore((st) => bookOrder(st.pages).length);
   // photo slots: which one the picker is filling, and which one's photo is being positioned
@@ -351,6 +365,7 @@ function PageEditor({ stored }: { stored: Page }) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     lastPress.current = { id: el.id, wasSelected: selectedId === el.id, moved: false };
     setSelectedId(el.id);
+    if (el.locked) return; // selected, but it stays where it is until it is unlocked
     const node = (e.currentTarget as HTMLElement).closest('.pg-el') as HTMLElement;
     const rect = node.getBoundingClientRect();
     const g = { sx: e.clientX, sy: e.clientY, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, h0: node.offsetHeight, moved: false };
@@ -378,6 +393,93 @@ function PageEditor({ stored }: { stored: Page }) {
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
       if (g.moved) savePage(pageRef.current);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
+  // ----- several parts at once ("Select"): tap to pick, drag any of them to move them together
+  const [multi, setMulti] = useState(false);
+  const [picked, setPickedState] = useState<string[]>([]);
+  const pickedRef = useRef<string[]>([]);
+  const setPicked = (ids: string[]) => {
+    pickedRef.current = ids;
+    setPickedState(ids);
+  };
+  const [clip, setClip] = useState(() => copiedParts() !== null);
+  const [note, setNote] = useState('');
+  /** A part's height on the page: for parts whose height follows their content, as it is drawn now. */
+  const heightOf = (el: PageElement) => (autoHeight(el) ? (canvasRef.current?.querySelector<HTMLElement>(`[data-el="${el.id}"]`)?.offsetHeight ?? el.h) : el.h);
+  const boxesOf = (ids: string[]): Box[] => pageRef.current.elements.filter((x) => ids.includes(x.id)).map((x) => ({ id: x.id, x: x.x, y: x.y, w: x.w, h: heightOf(x) }));
+  const partsOf = (ids: string[]) => pageRef.current.elements.filter((x) => ids.includes(x.id));
+  const movePicked = (patches: { id: string; x?: number; y?: number }[]) => {
+    if (!patches.length) return;
+    change((p) => ({
+      ...p,
+      elements: p.elements.map((x) => {
+        const m = patches.find((q) => q.id === x.id);
+        return m && !x.locked ? ({ ...x, ...(m.x !== undefined ? { x: m.x } : {}), ...(m.y !== undefined ? { y: m.y } : {}) } as PageElement) : x;
+      }),
+    }));
+  };
+  const addParts = (parts: PageElement[]) => {
+    if (!parts.length) return;
+    change((p) => ({ ...p, elements: [...p.elements, ...parts] }));
+    if (parts.length === 1) {
+      setMulti(false);
+      setPicked([]);
+      setSelectedId(parts[0].id);
+    } else {
+      setSelectedId(null);
+      setMulti(true);
+      setPicked(parts.map((x) => x.id));
+    }
+  };
+  const copyNow = (parts: PageElement[]) => {
+    if (!parts.length) return;
+    copyParts(parts);
+    setClip(true);
+    setNote(`Copied ${parts.length === 1 ? 'this part' : `${parts.length} parts`}. "Paste" puts ${parts.length === 1 ? 'it' : 'them'} on this page or any other.`);
+  };
+  const paste = () => {
+    const kept = copiedParts();
+    if (!kept) return;
+    setNote('');
+    addParts(placed(kept.parts, pageRef.current.size, kept.at));
+  };
+  const beginGroup = (e: React.PointerEvent, el: PageElement) => {
+    e.stopPropagation();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const was = pickedRef.current.includes(el.id);
+    const g = { sx: e.clientX, sy: e.clientY, moved: false };
+    const start = pageRef.current;
+    const move = (ev: PointerEvent) => {
+      if (!g.moved) {
+        if (Math.hypot(ev.clientX - g.sx, ev.clientY - g.sy) < 4) return; // a tap, not a drag
+        g.moved = true;
+        if (!was) setPicked([...pickedRef.current, el.id]);
+        remember();
+      }
+      const movable = start.elements.filter((x) => pickedRef.current.includes(x.id) && !x.locked);
+      if (!movable.length) return;
+      const s = scaleRef.current;
+      const d = clampMove(movable.map((x) => ({ x: x.x, y: x.y, w: x.w, h: heightOf(x) })), (ev.clientX - g.sx) / s, (ev.clientY - g.sy) / s, start.size);
+      const p = pageRef.current;
+      setPage({
+        ...p,
+        elements: p.elements.map((x) => {
+          const o = movable.find((m) => m.id === x.id);
+          return o ? ({ ...x, x: Math.round(o.x + d.dx), y: Math.round(o.y + d.dy) } as PageElement) : x;
+        }),
+      });
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      if (g.moved) savePage(pageRef.current);
+      else setPicked(was ? pickedRef.current.filter((id) => id !== el.id) : [...pickedRef.current, el.id]); // a tap picks it, or lets it go
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end);
@@ -518,6 +620,21 @@ function PageEditor({ stored }: { stored: Page }) {
     // keys typed into a part's own fields are writing, not moving or removing
     if ((e.target as HTMLElement).closest('input, textarea')) return;
     const step = e.shiftKey ? 50 : 10;
+    if (multi) {
+      // picking several: Space or Enter picks the part or lets it go, the arrows move all that are picked
+      const ids = pickedRef.current;
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        setPicked(ids.includes(el.id) ? ids.filter((id) => id !== el.id) : [...ids, el.id]);
+      } else if (e.key.startsWith('Arrow') && ids.length) {
+        e.preventDefault();
+        const boxes = boxesOf(ids.filter((id) => !pageRef.current.elements.find((x) => x.id === id)?.locked));
+        const d = clampMove(boxes, e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0, e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0, pageRef.current.size);
+        movePicked(boxes.map((b) => ({ id: b.id, x: b.x + d.dx, y: b.y + d.dy })));
+      }
+      return;
+    }
+    if (el.locked) return;
     const moves: Record<string, Patch> = {
       ArrowLeft: { x: el.x - step },
       ArrowRight: { x: el.x + step },
@@ -535,7 +652,10 @@ function PageEditor({ stored }: { stored: Page }) {
 
   // leave edit mode cleanly
   useEffect(() => {
-    if (!editing) setSelectedId(null);
+    if (editing) return;
+    setSelectedId(null);
+    setMulti(false);
+    setPicked([]);
   }, [editing]);
   // positioning a photo ends when something else is selected
   useEffect(() => {
@@ -559,7 +679,7 @@ function PageEditor({ stored }: { stored: Page }) {
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [editing, selectedId]);
+  }, [editing, selectedId, multi]);
 
   // A part just selected: scroll it fully into view above the panel.
   useEffect(() => {
@@ -687,6 +807,24 @@ function PageEditor({ stored }: { stored: Page }) {
       <button className="pe-tool" onClick={() => setSheet('shape')}>
         <span aria-hidden="true">⭕</span>Shape
       </button>
+      <button
+        className={`pe-tool ${multi ? 'is-on' : ''}`}
+        aria-pressed={multi}
+        onClick={() => {
+          setSelectedId(null);
+          setPicked([]);
+          setNote('');
+          setMulti(!multi);
+        }}
+      >
+        <span aria-hidden="true">☑️</span>Select
+      </button>
+      <button className="pe-tool" onClick={paste} disabled={!clip}>
+        <span aria-hidden="true">📋</span>Paste
+      </button>
+      <button className="pe-tool" onClick={() => setSheet('blocks')}>
+        <span aria-hidden="true">🧩</span>Blocks
+      </button>
       <button className="pe-tool" onClick={() => setSheet('background')}>
         <span aria-hidden="true">🎨</span>Paper
       </button>
@@ -700,8 +838,87 @@ function PageEditor({ stored }: { stored: Page }) {
 
   const props = editing && (
     <div className="pe-props" aria-live="polite" ref={propsRef}>
-      {!selected ? (
-        <p className="muted">Tap something on the page to move, resize or change it. Drag the round handle to turn it, the corner to resize.</p>
+      {multi ? (
+        <>
+          <div className="pe-props-head">
+            <strong>{picked.length === 0 ? 'Select parts' : `${picked.length} part${picked.length === 1 ? '' : 's'} selected`}</strong>
+            <div className="pe-actions">
+              <button className="btn btn-small" onClick={() => setPicked(page.elements.map((x) => x.id))} disabled={picked.length === page.elements.length}>
+                All
+              </button>
+              <button className="btn btn-small" onClick={() => setPicked([])} disabled={picked.length === 0}>
+                None
+              </button>
+              <button
+                className="btn btn-small btn-primary"
+                onClick={() => {
+                  setMulti(false);
+                  setPicked([]);
+                }}
+              >
+                Done selecting
+              </button>
+            </div>
+          </div>
+          {picked.length === 0 ? (
+            <p className="muted">Tap the parts you want. Then drag any one of them to move them together, or line them up, copy or remove them here.</p>
+          ) : (
+            <>
+              <div className="pe-field">
+                <span>Line up</span>
+                <div className="seg seg-small seg-wrap" role="group" aria-label="Line up">
+                  {ALIGNS.map(([how, name]) => (
+                    <button key={how} disabled={picked.length < 2} onClick={() => movePicked(alignBoxes(boxesOf(picked), how))}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="pe-field">
+                <span>Space evenly</span>
+                <div className="pe-row">
+                  <button className="btn btn-small" disabled={picked.length < 3} onClick={() => movePicked(distributeBoxes(boxesOf(picked), 'across'))}>
+                    Across
+                  </button>
+                  <button className="btn btn-small" disabled={picked.length < 3} onClick={() => movePicked(distributeBoxes(boxesOf(picked), 'down'))}>
+                    Down
+                  </button>
+                </div>
+              </div>
+              <div className="pe-actions">
+                <button className="btn btn-small" onClick={() => addParts(placed(partsOf(picked), page.size, boxesOf(picked).reduce((m, b) => ({ x: Math.min(m.x, b.x), y: Math.min(m.y, b.y) }), { x: Infinity, y: Infinity })))}>
+                  Duplicate
+                </button>
+                <button className="btn btn-small" onClick={() => copyNow(partsOf(picked))}>
+                  Copy
+                </button>
+                <button className="btn btn-small" onClick={() => setSheet('block')}>
+                  Save as a block
+                </button>
+                <button
+                  className="btn btn-small"
+                  onClick={() => {
+                    const lock = !partsOf(picked).every((x) => x.locked);
+                    change((p) => ({ ...p, elements: p.elements.map((x) => (picked.includes(x.id) ? ({ ...x, locked: lock ? true : undefined } as PageElement) : x)) }));
+                  }}
+                >
+                  {partsOf(picked).every((x) => x.locked) ? 'Unlock' : 'Lock'}
+                </button>
+                <button
+                  className="btn btn-small danger"
+                  onClick={() => {
+                    change((p) => ({ ...p, elements: p.elements.filter((x) => !picked.includes(x.id)) }));
+                    setPicked([]);
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      ) : !selected ? (
+        <p className="muted">Tap something on the page to move, resize or change it. Drag the round handle to turn it, the corner to resize. "Select" picks several parts at once.</p>
       ) : (
         <>
           <div className="pe-props-head">
@@ -714,7 +931,16 @@ function PageEditor({ stored }: { stored: Page }) {
                 Back
               </button>
               <button className="btn btn-small" onClick={() => duplicateEl(selected)}>
+                Duplicate
+              </button>
+              <button className="btn btn-small" onClick={() => copyNow([selected])}>
                 Copy
+              </button>
+              <button className="btn btn-small" aria-pressed={!!selected.locked} onClick={() => patchEl(selected.id, { locked: selected.locked ? undefined : true })}>
+                {selected.locked ? 'Unlock' : 'Lock'}
+              </button>
+              <button className="btn btn-small" onClick={() => setSheet('block')}>
+                Save as a block
               </button>
               <button className="btn btn-small danger" onClick={() => removeEl(selected.id)}>
                 Remove
@@ -905,7 +1131,7 @@ function PageEditor({ stored }: { stored: Page }) {
                         setRecent(rememberTape(t.id));
                       }}
                     >
-                      {BASIC_TAPES.has(t.id) ? <i className={`pg-tape tape-${t.id} edge-${selected.edge ?? 'torn'}`} style={{ backgroundColor: TAPE_COLORS[selected.color] }} /> : <TapeStrip color={tapeColorFor(t.id, selected.color)} pattern={t.id} edge={selected.edge} />}
+                      {BASIC_TAPES.has(t.id) ? <i className={`pg-tape tape-${t.id} edge-${selected.edge ?? 'torn'}`} style={{ backgroundColor: paint(selected.color) }} /> : <TapeStrip color={tapeColorFor(t.id, selected.color)} pattern={t.id} edge={selected.edge} />}
                     </button>
                   ))}
                 </div>
@@ -1288,6 +1514,11 @@ function PageEditor({ stored }: { stored: Page }) {
           )}
         </>
       )}
+      {note && (
+        <p className="muted" role="status">
+          {note}
+        </p>
+      )}
       {message && (
         <p className="warning" role="alert">
           {message}
@@ -1297,7 +1528,7 @@ function PageEditor({ stored }: { stored: Page }) {
   );
 
   return (
-    <div className={`pe ${editing ? 'is-editing' : ''} ${selected ? 'has-selection' : ''}`}>
+    <div className={`pe ${editing ? 'is-editing' : ''} ${selected || multi ? 'has-selection' : ''}`}>
       <header className="page-head pe-head">
         <Link to={backTo} className="icon-btn" aria-label={isCover ? 'Back to the book' : page.isTemplate ? 'Back to templates' : 'Back to journal'}>
           ‹
@@ -1351,18 +1582,21 @@ function PageEditor({ stored }: { stored: Page }) {
           {editing ? (
             <PageSurface page={page} width={width} className="is-edit" coverCount={pageCount} onPointerDown={(e) => e.target === e.currentTarget && setSelectedId(null)}>
               {page.elements.map((el) => {
-                const on = el.id === selectedId;
+                const on = !multi && el.id === selectedId;
                 const typing = on && isWritable(el);
                 const cropping = on && el.type === 'frame' && croppingId === el.id && Boolean(el.assetId);
                 return (
                   <div
                     key={el.id}
-                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''} ${typing ? 'is-typing' : ''} ${cropping ? 'is-cropping' : ''}`}
+                    className={`pg-el type-${el.type} ${on ? 'is-selected' : ''} ${typing ? 'is-typing' : ''} ${cropping ? 'is-cropping' : ''} ${multi && picked.includes(el.id) ? 'is-picked' : ''} ${el.locked ? 'is-locked' : ''}`}
+                    data-el={el.id}
+                    aria-pressed={multi ? picked.includes(el.id) : undefined}
                     style={frameStyle(el)}
                     tabIndex={0}
                     role="button"
                     aria-label={`${TYPE_NAMES[el.type]}${el.type === 'text' ? `: ${el.text.slice(0, 40)}` : ''}${on ? ', selected' : ''}`}
                     onPointerDown={(e) => {
+                      if (multi) return beginGroup(e, el);
                       // in the selected part, pressing a field or button types or taps; elsewhere it drags
                       if (typing && (e.target as HTMLElement).closest('input, textarea, button')) return e.stopPropagation();
                       if (cropping && el.type === 'frame') return beginPan(e, el);
@@ -1378,20 +1612,25 @@ function PageEditor({ stored }: { stored: Page }) {
                         ? (e) => patchEl(el.id, { zoom: Math.round(clamp((el.zoom ?? 1) * (e.deltaY < 0 ? 1.08 : 1 / 1.08), 1, 4) * 100) / 100 }, 'frame-zoom')
                         : undefined
                     }
-                    onFocus={(e) => e.target === e.currentTarget && setSelectedId(el.id)}
+                    onFocus={(e) => e.target === e.currentTarget && !multi && setSelectedId(el.id)}
                     onKeyDown={(e) => onKey(e, el)}
                   >
                     <div className="pg-el-body">
                       <ElementBody el={el} live={false} editing={typing} onChange={typing ? (patch) => patchEl(el.id, patch, `fill-${el.id}`) : undefined} />
                     </div>
-                    {on && el.type === 'line' && (
+                    {el.locked && (on || (multi && picked.includes(el.id))) && (
+                      <span className="lock-badge" aria-hidden="true">
+                        🔒
+                      </span>
+                    )}
+                    {on && el.type === 'line' && !el.locked && (
                       <>
                         <span className="handle handle-point" data-handle="a" style={handleAt(linePoints(el, true).a)} onPointerDown={(e) => beginPoint(e, el, 'a')} aria-hidden="true" />
                         <span className="handle handle-point" data-handle="b" style={handleAt(linePoints(el, true).b)} onPointerDown={(e) => beginPoint(e, el, 'b')} aria-hidden="true" />
                         <span className="handle handle-bend" data-handle="mid" style={handleAt(middle(linePoints(el, true)))} onPointerDown={(e) => beginPoint(e, el, 'mid')} aria-hidden="true" />
                       </>
                     )}
-                    {on && el.type !== 'line' && (
+                    {on && el.type !== 'line' && !el.locked && (
                       <>
                         {typing && (
                           <span className="handle handle-move" onPointerDown={(e) => begin(e, el, 'move')} aria-hidden="true">
@@ -1572,7 +1811,7 @@ function PageEditor({ stored }: { stored: Page }) {
           </div>
           <div className="pe-field">
             <span>Pattern</span>
-            <div className="seg seg-small" role="radiogroup" aria-label="Paper pattern">
+            <div className="seg seg-small seg-wrap" role="radiogroup" aria-label="Paper pattern">
               {PATTERNS.map((pt) => (
                 <button key={pt.id} role="radio" aria-checked={page.background.pattern === pt.id} className={page.background.pattern === pt.id ? 'is-on' : ''} onClick={() => change((p) => ({ ...p, background: { ...p.background, pattern: pt.id } }))}>
                   {pt.name}
@@ -1589,6 +1828,11 @@ function PageEditor({ stored }: { stored: Page }) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="pe-field">
+            <span>Recolour page</span>
+            <RecolourList onPick={(palette) => change((p) => recolour(p, palette))} />
+            <small className="muted">Gives the paper and every part of the page a palette's colours in one go. Undo brings the old colours back.</small>
           </div>
           <div className="pe-field">
             <span>Background picture</span>
@@ -1708,6 +1952,27 @@ function PageEditor({ stored }: { stored: Page }) {
           }}
         />
       )}
+      {sheet === 'blocks' && (
+        <BlocksSheet
+          onClose={() => setSheet(null)}
+          onInsert={(parts) => {
+            setSheet(null);
+            addParts(placed(parts, pageRef.current.size));
+          }}
+        />
+      )}
+      {sheet === 'block' && (
+        <SaveBlockSheet
+          parts={multi ? partsOf(picked) : selected ? [selected] : []}
+          size={page.size}
+          onClose={() => setSheet(null)}
+          onSaved={(name) => {
+            setSheet(null);
+            setNote(`Saved as the block "${name}". It is under "Blocks" on every page.`);
+          }}
+        />
+      )}
+
       {sheet === 'shape' && (
         <Sheet title="Add a shape" onClose={() => setSheet(null)}>
           <div className="shape-picker">
